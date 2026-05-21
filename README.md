@@ -18,6 +18,16 @@ The included workflow file `.github/workflows/pages.yml` will publish the site t
 2. Upload `index.html`, `styles.css`, `script.js`, and `.github/workflows/pages.yml`.
 3. Commit the changes.
 
+### Option 3: Deploy on Vercel
+
+1. Sign in to https://vercel.com with your GitHub account.
+2. Click "New Project" and import the `mohamadfayoumi1-cyber/learning` repository.
+3. Use the default settings; Vercel detects the static HTML site automatically.
+4. If Vercel asks for a framework, choose "Other" or "Static Site".
+5. Deploy the project.
+
+After the first deploy, Vercel will give you a public URL like `https://<project-name>.vercel.app/`.
+
 ### After publishing
 
 Once the repository is pushed, GitHub Actions will deploy the site. The expected URL is:
