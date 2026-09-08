@@ -1,0 +1,1502 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>Collaborative Training Cone System — Design Specification</title>
+<link rel="stylesheet" href="style.css">
+<style>.tocmk{font-size:3px;color:#fff;letter-spacing:0;font-family:monospace}</style>
+</head><body>
+
+<!-- ============ DOCUMENT CONTROL ============ -->
+<h1 class="part"><span class="tocmk">QQ001QQ</span>Document Control<span class="pt">Front matter</span></h1>
+
+<table class="compact">
+<tbody>
+<tr><td style="width:34%;font-weight:700;color:#181c20">Project</td><td>Collaborative Training Cone System</td></tr>
+<tr><td style="font-weight:700;color:#181c20">Document</td><td>Functional Specification, System Architecture &amp; Project Plan</td></tr>
+<tr><td style="font-weight:700;color:#181c20">Revision</td><td>1.0 — first issue</td></tr>
+<tr><td style="font-weight:700;color:#181c20">Date</td><td>8 September 2026</td></tr>
+<tr><td style="font-weight:700;color:#181c20">Programme</td><td>Senior Learning Project (SLP), academic year 2026–2027</td></tr>
+<tr><td style="font-weight:700;color:#181c20">Category</td><td>Mechanical and Mechatronics</td></tr>
+<tr><td style="font-weight:700;color:#181c20">Advisor</td><td>Ahmad Koubeissi</td></tr>
+<tr><td style="font-weight:700;color:#181c20">Team composition</td><td>1 student (MECH) + 3 students (MECA)</td></tr>
+<tr><td style="font-weight:700;color:#181c20">Status</td><td>Design phase — specification and architecture. No implementation has begun.</td></tr>
+</tbody></table>
+
+<h3><span class="n">§</span>How this document is organised</h3>
+<p>The document is in three parts and three appendices.</p>
+<table class="compact">
+<thead><tr><th style="width:18%">Part</th><th style="width:32%">Title</th><th>Answers</th></tr></thead>
+<tbody>
+<tr><td><b>I</b></td><td>Functional Specification</td><td><b>What the system does.</b> Features, use cases, interface, measurable requirements, priorities and scope boundaries</td></tr>
+<tr><td><b>II</b></td><td>System Architecture</td><td><b>How it does it.</b> The design decisions, the reasoning behind each, and the resulting decomposition</td></tr>
+<tr><td><b>III</b></td><td>Execution</td><td><b>Who builds what, and when.</b> Team split, milestones, sequencing and risk</td></tr>
+<tr><td><b>A–C</b></td><td>Appendices</td><td>Consolidated feature index, requirements index, glossary</td></tr>
+</tbody></table>
+
+<div class="note">
+<span class="lbl">Precedence</span>
+<p><b>Part I is authoritative.</b> It states what the system must do and is the basis on
+which the project will be assessed. Part II is subordinate: it is one defensible way of
+meeting Part I, and where the two conflict, the architecture changes rather than the
+specification. Part III schedules the work in Part I's own terms, so that progress is
+measured against the specification rather than against effort spent.</p>
+</div>
+
+<h3><span class="n">§</span>Identifier conventions</h3>
+<p>Every feature and requirement carries a stable identifier. These identifiers are the
+project's common vocabulary: they should be cited in commit messages, test case names,
+report sections and the defence presentation, so that any statement about progress points
+at something specific in this document.</p>
+<table class="compact ids">
+<thead><tr><th style="width:16%">Prefix</th><th style="width:26%">Meaning</th><th>Example</th></tr></thead>
+<tbody>
+<tr><td>F<i>n</i>.<i>m</i></td><td>Functional feature</td><td><code>F3.6</code> — fleet READY indication</td></tr>
+<tr><td>NFR-<i>n</i></td><td>Non-functional requirement</td><td><code>NFR-1</code> — position accuracy within 15 cm RMS</td></tr>
+<tr><td>UC-<i>n</i></td><td>Use case</td><td><code>UC-3</code> — a cone is knocked over during an exercise</td></tr>
+<tr><td>RSK-<i>n</i></td><td>Risk register entry</td><td><code>RSK-1</code> — outdoor UWB accuracy shortfall</td></tr>
+</tbody></table>
+
+<h3><span class="n">§</span>Relationship to the approved project proposal</h3>
+<p>This document elaborates the approved SLP proposal. It preserves the proposal's
+objectives without exception and adds the detail needed to build and assess the system.
+Four substantive additions are made, each argued at the point it appears:</p>
+<table class="compact">
+<thead><tr><th style="width:20%">Addition</th><th style="width:14%">Where</th><th>Why it was added</th></tr></thead>
+<tbody>
+<tr><td><b>Vehicle-present interlock</b></td><td><span class="fid">F5.6</span>, §2.5</td><td>The system moves robots across a surface on which a learner driver is operating a car. An explicit, instructor-owned motion inhibit is the single most important safety feature and was not in the proposal</td></tr>
+<tr><td><b>Displaced-cone re-deployment</b></td><td><span class="fid">F3.8</span>, §2.3</td><td>Training cones get struck. A system needing full redeployment after every contact would be worse than manual placement</td></tr>
+<tr><td><b>Fleet size fixed at six</b></td><td>§3</td><td>The proposal leaves the number of cones open, yet it determines cost, pad size and the difficulty of coordination. The standard exercises require 4–12; six is the defensible prototype baseline</td></tr>
+<tr><td><b>Measurable acceptance criteria</b></td><td>§6, §8</td><td>The proposal lists deliverables but no thresholds. Without numbers, "the cones reached their positions" cannot be assessed, defended, or failed</td></tr>
+</tbody></table>
+
+<!-- ============ PART I ============ -->
+<h1 class="part"><span class="tocmk">QQ002QQ</span>Part I — Functional Specification<span class="pt">Part I</span></h1>
+
+<h2><span class="tocmk">QQ003QQ</span><span class="n">1</span>Purpose and scope</h2>
+
+<h3><span class="n">1.1</span>Problem statement</h3>
+<p>A driving instructor running a practical lesson on a training pad sets each exercise by
+walking the pad and placing traffic cones by hand, measuring spacings by pacing or with a
+tape. Changing from a slalom to a parallel-parking bay means walking the pad again.</p>
+<p>Three costs follow. In a sixty-minute lesson, ten to fifteen minutes of instruction time
+is spent on cone placement rather than teaching. Geometry is inconsistent between sessions
+and between instructors, so a trainee's performance is not comparable from one lesson to
+the next. And placement puts an instructor on foot in the same space in which a learner
+driver is operating a vehicle.</p>
+
+<h3><span class="n">1.2</span>What the system does</h3>
+<p>The Collaborative Training Cone System replaces manual placement with a fleet of
+self-driving cones. The instructor selects or draws an exercise on a tablet; the fleet
+arranges itself into that exercise; redrawing rearranges it. Cone geometry becomes
+repeatable to the centimetre, changeover takes under a minute, and the instructor never
+leaves the vehicle or the edge of the pad.</p>
+
+<h3><span class="n">1.3</span>System boundary</h3>
+<table class="compact">
+<thead><tr><th style="width:24%">Inside the boundary</th><th>Comprising</th></tr></thead>
+<tbody>
+<tr><td><b>Cone units</b></td><td>The mobile robots, their shells, drives, sensing, power and firmware</td></tr>
+<tr><td><b>Localisation infrastructure</b></td><td>Fixed anchors and their survey, plus the development ground-truth rig</td></tr>
+<tr><td><b>Radio gateway</b></td><td>The bridge between the coordinator host and the cone control link</td></tr>
+<tr><td><b>Coordinator</b></td><td>The software that compiles layouts, assigns cones and plans motion</td></tr>
+<tr><td><b>Tablet application</b></td><td>The instructor's entire interface to the system</td></tr>
+</tbody></table>
+<p>Outside the boundary: the training pad and its surface, the training vehicle, the
+driving syllabus, mains power and charging infrastructure, and the tablet hardware itself.</p>
+
+<h3><span class="n">1.4</span>Actors</h3>
+<table class="compact">
+<thead><tr><th style="width:19%">Actor</th><th style="width:19%">Type</th><th>Interaction and assumptions</th></tr></thead>
+<tbody>
+<tr><td><b>Instructor</b></td><td>Primary human user</td><td>Authors and deploys layouts, monitors the fleet, stops it. Assumed non-technical, and assumed to be seated in or standing beside a vehicle</td></tr>
+<tr><td><b>Technician</b></td><td>Secondary human user</td><td>First-time pad setup, calibration, charging, firmware updates, fault recovery. Assumed trained on the system</td></tr>
+<tr><td><b>Cone unit</b></td><td>Autonomous agent</td><td>Localises, drives, avoids its neighbours, reports its state, and protects itself when contact with the outside world goes wrong</td></tr>
+<tr><td><b>Coordinator</b></td><td>Software agent</td><td>Compiles layouts, assigns and plans, and mediates every instructor command</td></tr>
+<tr><td><b>Trainee driver</b></td><td>Affected party — <b>not a user</b></td><td>Never operates the system and may not be aware of it. Their safety constrains every requirement in §2.5</td></tr>
+</tbody></table>
+
+<h3><span class="n">1.5</span>Assumed operating environment</h3>
+<p>An outdoor asphalt or concrete training pad, nominally 30 × 50 m, effectively flat
+(gradient ≤ 5%), in daylight, dry to lightly wet, at 0–45 °C, with no overhead cover and
+one training vehicle present at a time.</p>
+<div class="note warn">
+<span class="lbl">Confirm before design freeze</span>
+<p>These assumptions drive a large fraction of the requirements that follow — in particular
+the choice of localisation technology, which is the project's highest-risk subsystem. They
+are stated here as assumptions precisely so that they can be checked. See §10, question 2.</p>
+</div>
+
+<h2 class="newpage"><span class="tocmk">QQ004QQ</span><span class="n">2</span>Feature catalogue</h2>
+<p>Fifty-three features in eight functional areas. Each carries an identifier that is used
+throughout the remainder of the project.</p>
+
+<figure>
+<svg viewBox="0 0 700 278" xmlns="http://www.w3.org/2000/svg" font-family="Liberation Sans, Arial, sans-serif">
+ <defs>
+  <style>
+   .bx{fill:#fbfcfd;stroke:#bcd6dc;stroke-width:1.2;rx:4}
+   .hd{fill:#0f5666}
+   .id{fill:#ffffff;font-size:13px;font-weight:700;letter-spacing:.5px}
+   .tt{fill:#ffffff;font-size:11.5px;font-weight:700}
+   .li{fill:#4a545e;font-size:10.5px}
+   .dot{fill:#14707f}
+  </style>
+ </defs>
+ <!-- row 1 -->
+ <g>
+  <rect class="bx" x="0.6" y="0.6" width="162" height="127" rx="4"/>
+  <path class="hd" d="M0.6 4.6a4 4 0 0 1 4-4h154a4 4 0 0 1 4 4V29H0.6z"/>
+  <text class="id" x="10" y="20">F1</text><text class="tt" x="38" y="20">Course authoring</text>
+  <g class="li"><circle class="dot" cx="12" cy="48" r="2"/><text x="20" y="51">Freehand path &amp; primitives</text>
+  <circle class="dot" cx="12" cy="68" r="2"/><text x="20" y="71">Spacing in metres, per segment</text>
+  <circle class="dot" cx="12" cy="88" r="2"/><text x="20" y="91">Numeric dimensioning</text>
+  <circle class="dot" cx="12" cy="108" r="2"/><text x="20" y="111">Live feasibility check</text></g>
+ </g>
+ <g>
+  <rect class="bx" x="179.6" y="0.6" width="162" height="127" rx="4"/>
+  <path class="hd" d="M179.6 4.6a4 4 0 0 1 4-4h154a4 4 0 0 1 4 4V29H179.6z"/>
+  <text class="id" x="189" y="20">F2</text><text class="tt" x="217" y="20">Layout library</text>
+  <g class="li"><circle class="dot" cx="191" cy="48" r="2"/><text x="199" y="51">Save, load, manage</text>
+  <circle class="dot" cx="191" cy="68" r="2"/><text x="199" y="71">Seven standard exercises</text>
+  <circle class="dot" cx="191" cy="88" r="2"/><text x="199" y="91">Lesson sequences</text>
+  <circle class="dot" cx="191" cy="108" r="2"/><text x="199" y="111">Import / export</text></g>
+ </g>
+ <g>
+  <rect class="bx" x="358.6" y="0.6" width="162" height="127" rx="4"/>
+  <path class="hd" d="M358.6 4.6a4 4 0 0 1 4-4h154a4 4 0 0 1 4 4V29H358.6z"/>
+  <text class="id" x="368" y="20">F3</text><text class="tt" x="396" y="20">Deployment</text>
+  <g class="li"><circle class="dot" cx="370" cy="48" r="2"/><text x="378" y="51">Preview with ETA</text>
+  <circle class="dot" cx="370" cy="68" r="2"/><text x="378" y="71">Execute, pause, abort</text>
+  <circle class="dot" cx="370" cy="88" r="2"/><text x="378" y="91">Unambiguous READY</text>
+  <circle class="dot" cx="370" cy="108" r="2"/><text x="378" y="111">Gather &amp; re-deploy</text></g>
+ </g>
+ <g>
+  <rect class="bx" x="537.6" y="0.6" width="162" height="127" rx="4"/>
+  <path class="hd" d="M537.6 4.6a4 4 0 0 1 4-4h154a4 4 0 0 1 4 4V29H537.6z"/>
+  <text class="id" x="547" y="20">F4</text><text class="tt" x="575" y="20">Monitoring</text>
+  <g class="li"><circle class="dot" cx="549" cy="48" r="2"/><text x="557" y="51">Live map, deviation</text>
+  <circle class="dot" cx="549" cy="68" r="2"/><text x="557" y="71">Battery &amp; link health</text>
+  <circle class="dot" cx="549" cy="88" r="2"/><text x="557" y="91">Alerts</text>
+  <circle class="dot" cx="549" cy="108" r="2"/><text x="557" y="111">Session event log</text></g>
+ </g>
+ <!-- row 2 -->
+ <g>
+  <rect x="0.6" y="146.6" width="162" height="127" rx="4" fill="#fdf7f6" stroke="#e8c8c2" stroke-width="1.2"/>
+  <path d="M0.6 150.6a4 4 0 0 1 4-4h154a4 4 0 0 1 4 4V175H0.6z" fill="#8e3229"/>
+  <text class="id" x="10" y="166">F5</text><text class="tt" x="38" y="166">Safety</text>
+  <text x="152" y="166" fill="#ffffff" font-size="8.5px" font-weight="700" text-anchor="end" letter-spacing=".8">MANDATORY</text>
+  <g class="li"><circle cx="12" cy="194" r="2" fill="#8e3229"/><text x="20" y="197">E-stop, 500 ms watchdog</text>
+  <circle cx="12" cy="214" r="2" fill="#8e3229"/><text x="20" y="217">Geofence</text>
+  <circle cx="12" cy="234" r="2" fill="#8e3229"/><text x="20" y="237">Tip &amp; obstacle reflex</text>
+  <circle cx="12" cy="254" r="2" fill="#8e3229"/><text x="20" y="257">Vehicle-present interlock</text></g>
+ </g>
+ <g>
+  <rect class="bx" x="179.6" y="146.6" width="162" height="127" rx="4"/>
+  <path class="hd" d="M179.6 150.6a4 4 0 0 1 4-4h154a4 4 0 0 1 4 4V175H179.6z"/>
+  <text class="id" x="189" y="166">F6</text><text class="tt" x="217" y="166">Cone autonomy</text>
+  <g class="li"><circle class="dot" cx="191" cy="194" r="2"/><text x="199" y="197">Self-localise</text>
+  <circle class="dot" cx="191" cy="214" r="2"/><text x="199" y="217">Drive to pose, hold it</text>
+  <circle class="dot" cx="191" cy="234" r="2"/><text x="199" y="237">Mutual avoidance</text>
+  <circle class="dot" cx="191" cy="254" r="2"/><text x="199" y="257">Self-test, battery, identify</text></g>
+ </g>
+ <g>
+  <rect class="bx" x="358.6" y="146.6" width="162" height="127" rx="4"/>
+  <path class="hd" d="M358.6 150.6a4 4 0 0 1 4-4h154a4 4 0 0 1 4 4V175H358.6z"/>
+  <text class="id" x="368" y="166">F7</text><text class="tt" x="396" y="166">Administration</text>
+  <g class="li"><circle class="dot" cx="370" cy="194" r="2"/><text x="378" y="197">Pad survey &amp; boundary</text>
+  <circle class="dot" cx="370" cy="214" r="2"/><text x="378" y="217">Fleet registration</text>
+  <circle class="dot" cx="370" cy="234" r="2"/><text x="378" y="237">Guided calibration</text>
+  <circle class="dot" cx="370" cy="254" r="2"/><text x="378" y="257">Diagnostics &amp; updates</text></g>
+ </g>
+ <g>
+  <rect class="bx" x="537.6" y="146.6" width="162" height="127" rx="4"/>
+  <path class="hd" d="M537.6 150.6a4 4 0 0 1 4-4h154a4 4 0 0 1 4 4V175H537.6z"/>
+  <text class="id" x="547" y="166">F8</text><text class="tt" x="575" y="166">Data</text>
+  <g class="li"><circle class="dot" cx="549" cy="194" r="2"/><text x="557" y="197">Session record</text>
+  <circle class="dot" cx="549" cy="214" r="2"/><text x="557" y="217">Accuracy record</text>
+  <circle class="dot" cx="549" cy="234" r="2"/><text x="557" y="237">CSV / JSON export</text>
+  <circle class="dot" cx="549" cy="254" r="2"/><text x="557" y="257">Evidence for the report</text></g>
+ </g>
+</svg>
+<figcaption><b>Figure 1.</b> The eight functional areas. F5 is shown apart because every
+feature in it is mandatory and none may be traded away for schedule.</figcaption>
+</figure>
+
+<h3><span class="n">2.1</span>F1 — Course authoring</h3>
+<p>The instructor defines exercise geometry on the tablet.</p>
+<table class="ids">
+<thead><tr><th style="width:9%">ID</th><th style="width:24%">Feature</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>F1.1</td><td>Freehand path</td><td>Draw a continuous path with a finger or stylus on a scaled plan of the pad</td></tr>
+<tr><td>F1.2</td><td>Point placement</td><td>Tap to place, drag to move, long-press to delete an individual cone position</td></tr>
+<tr><td>F1.3</td><td>Geometric primitives</td><td>Insert a parameterised straight line, arc, circle or rectangle instead of drawing by hand</td></tr>
+<tr><td>F1.4</td><td>Path editing</td><td>Insert, move and delete control points; unlimited undo and redo</td></tr>
+<tr><td>F1.5</td><td>Automatic spacing</td><td>Distribute cones evenly along a path at a spacing given in metres — default 2.0 m, range 0.5–20 m, settable per segment</td></tr>
+<tr><td>F1.6</td><td>Numeric dimensioning</td><td>Enter exact dimensions instead of drawing: a 6.0 × 2.5 m parking bay, or a slalom at 9.0 m pitch</td></tr>
+<tr><td>F1.7</td><td>Feasibility check</td><td>Validate continuously <i>while the layout is being drawn</i>: cones required against cones available and healthy, every point inside the pad boundary, no two points closer than the minimum separation. Violations are reported in place</td></tr>
+<tr><td>F1.8</td><td>Layout transform</td><td>Translate, rotate and scale the whole layout on the pad; mirror about an axis</td></tr>
+<tr><td>F1.9</td><td>Reference overlay</td><td>Show pad boundary, a metric grid, and optionally the previous layout in grey for comparison</td></tr>
+</tbody></table>
+<div class="note">
+<span class="lbl">Design rationale — F1.7</span>
+<p>This is the feature that prevents the most common operational failure. Without it, an
+instructor discovers <i>mid-deployment</i> that the layout needs nine cones and the fleet
+has six healthy ones — at which point cones are already moving and the exercise is late.
+Validation belongs at authoring time, not at execution time.</p>
+</div>
+
+<h3><span class="n">2.2</span>F2 — Layout library</h3>
+<table class="ids">
+<thead><tr><th style="width:9%">ID</th><th style="width:24%">Feature</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>F2.1</td><td>Save</td><td>Store the current layout under a name, with author and date</td></tr>
+<tr><td>F2.2</td><td>Load</td><td>Recall a stored layout into the editor, or deploy it directly</td></tr>
+<tr><td>F2.3</td><td>Standard presets</td><td>Ship a built-in, parameterised set (§3) so a new instructor is productive without drawing anything</td></tr>
+<tr><td>F2.4</td><td>Manage</td><td>Duplicate, rename, delete; mark favourites</td></tr>
+<tr><td>F2.5</td><td>Import / export</td><td>Exchange layouts between instructors and installations as a documented JSON file</td></tr>
+<tr><td>F2.6</td><td>Lesson sequence</td><td>Group layouts into an ordered lesson; a single <b>Next Exercise</b> action advances the fleet from one to the next</td></tr>
+</tbody></table>
+<div class="note good">
+<span class="lbl">Design rationale — F2.6</span>
+<p>This feature expresses the value of the whole project better than any other. A single
+button that reconfigures an entire training pad between exercises makes the case to an
+assessment panel far more effectively than any one layout can. It is inexpensive to build
+once F2.2 and F3.2 exist.</p>
+</div>
+
+<h3><span class="n">2.3</span>F3 — Deployment and execution</h3>
+<table class="ids">
+<thead><tr><th style="width:9%">ID</th><th style="width:24%">Feature</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>F3.1</td><td>Preview</td><td>Before any cone moves, show which cone is assigned to which target and the path each will take, with an estimated time to completion</td></tr>
+<tr><td>F3.2</td><td>Execute</td><td>Commit the layout; the fleet moves</td></tr>
+<tr><td>F3.3</td><td>Live progress</td><td>Per-cone state and remaining distance, an overall percentage, and an updating ETA</td></tr>
+<tr><td>F3.4</td><td>Pause / resume</td><td>Freeze the fleet in place and continue from the same assignment</td></tr>
+<tr><td>F3.5</td><td>Abort</td><td>Stop the operation, offering stop-in-place or return-to-previous-layout</td></tr>
+<tr><td>F3.6</td><td>READY signal</td><td>An unambiguous fleet-wide indication — on the tablet and on the cones — that every cone is within tolerance and has settled, so the instructor knows the exercise may begin</td></tr>
+<tr><td>F3.7</td><td>Gather</td><td>Send every cone to a defined collection area for storage or charging</td></tr>
+<tr><td>F3.8</td><td>Re-deploy displaced</td><td>Detect a cone knocked out of position and, on instructor confirmation, drive it back to its target without disturbing the rest of the layout</td></tr>
+</tbody></table>
+<div class="note safety">
+<span class="lbl">Safety rationale — F3.6</span>
+<p>READY is a safety feature, not a convenience. The instructor must never have to guess
+whether the fleet has finished moving before releasing a vehicle onto the pad. It is
+specified as a full-width banner rather than a small icon for exactly this reason (§5).</p>
+</div>
+<div class="note">
+<span class="lbl">Design rationale — F3.8</span>
+<p>Cones in driver training get hit; that is what they are for. A system that requires a
+full redeployment after every contact is <i>worse</i> than manual placement, because the
+instructor must now interrupt the lesson and wait for six cones. A system that quietly
+nudges one cone back into place is better than anything a human can do without stopping
+the vehicle.</p>
+</div>
+
+<h3><span class="n">2.4</span>F4 — Monitoring</h3>
+<table class="ids">
+<thead><tr><th style="width:9%">ID</th><th style="width:24%">Feature</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>F4.1</td><td>Live map</td><td>Real-time cone positions on the pad plan, with target positions shown as ghosts and deviation drawn as a vector</td></tr>
+<tr><td>F4.2</td><td>Per-cone status</td><td>Identifier, state, battery percentage, link quality, position error, and time since last contact</td></tr>
+<tr><td>F4.3</td><td>Fleet summary</td><td>Count of cones ready, moving, faulted and offline, readable at a glance</td></tr>
+<tr><td>F4.4</td><td>Alerts</td><td>Raise and clear: low battery, link lost, cone tipped, cone blocked or stalled, localisation degraded, geofence violation</td></tr>
+<tr><td>F4.5</td><td>Event log</td><td>Timestamped record of every command, state change and alert in the session</td></tr>
+</tbody></table>
+
+<h3><span class="n">2.5</span>F5 — Safety</h3>
+<p><b>Every requirement in this group is mandatory.</b> None may be traded away for
+schedule, and none may be deferred to a later revision.</p>
+<table class="ids">
+<thead><tr><th style="width:9%">ID</th><th style="width:24%">Feature</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>F5.1</td><td>Emergency stop</td><td>A single action stops the entire fleet. Available as a permanent on-screen control <i>and</i> as a physical handheld button independent of the tablet</td></tr>
+<tr><td>F5.2</td><td>Comms watchdog</td><td>A cone that receives no valid command for 500 ms stops itself. Safety does not depend on the radio working</td></tr>
+<tr><td>F5.3</td><td>Geofence</td><td>A cone refuses to drive outside the configured pad boundary regardless of the commanded target</td></tr>
+<tr><td>F5.4</td><td>Tip-over detection</td><td>A cone that is knocked over cuts motor drive within 1 s and reports it</td></tr>
+<tr><td>F5.5</td><td>Obstacle reflex</td><td>A cone that detects an object within 40 cm ahead brakes, independently of the central planner</td></tr>
+<tr><td>F5.6</td><td>Vehicle-present interlock</td><td>While the instructor has flagged a vehicle as active on the pad, the fleet will not move. Overriding requires a deliberate, separate confirmation</td></tr>
+<tr><td>F5.7</td><td>Speed limiting</td><td>Configurable maximum speed, enforced in firmware, defaulting to 0.8 m/s</td></tr>
+<tr><td>F5.8</td><td>Movement conspicuity</td><td>A moving cone shows a flashing light and sounds an intermittent tone</td></tr>
+</tbody></table>
+<div class="note safety">
+<span class="lbl">Addition to the proposal — F5.6</span>
+<p>The vehicle-present interlock does not appear in the approved proposal and should be
+added to it. The system moves robots across a surface on which a learner driver is
+operating a car. An explicit interlock, owned by the instructor rather than inferred by
+the system, is the single most important safety feature in this specification — and it is
+the first thing an assessment panel will ask about.</p>
+<p>Note the deliberate division of responsibility: <b>F5.1, F5.6 and F5.7 are policy,
+set by a human. F5.2, F5.3, F5.4 and F5.5 are reflexes, implemented on the cone.</b> The
+reflexes must remain effective when the coordinator, the radio or the tablet has failed.
+No safety property in this specification depends on a working radio link.</p>
+</div>
+
+<h3><span class="n">2.6</span>F6 — Cone autonomy</h3>
+<p>Functions each cone performs on its own.</p>
+<table class="ids">
+<thead><tr><th style="width:9%">ID</th><th style="width:24%">Feature</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>F6.1</td><td>Self-localisation</td><td>Continuously estimate its own position and heading on the pad</td></tr>
+<tr><td>F6.2</td><td>Drive to pose</td><td>Navigate to a commanded position, and to a commanded heading where the exercise requires one</td></tr>
+<tr><td>F6.3</td><td>Hold position</td><td>Maintain position against wind, slope and minor contact; correct drift automatically</td></tr>
+<tr><td>F6.4</td><td>Mutual avoidance</td><td>Avoid other cones while in motion, cooperatively rather than by stopping</td></tr>
+<tr><td>F6.5</td><td>Telemetry</td><td>Report pose, state, battery and health at 10 Hz</td></tr>
+<tr><td>F6.6</td><td>Power-on self-test</td><td>Verify motors, encoders, IMU, radio and localisation at boot; refuse to join the fleet on failure</td></tr>
+<tr><td>F6.7</td><td>Battery management</td><td>Report state of charge; warn at 20%; refuse new assignments below 10%; return to the gather point while still able</td></tr>
+<tr><td>F6.8</td><td>Identify</td><td>On request, blink and beep so an operator can pick one physical cone out of the fleet</td></tr>
+</tbody></table>
+<div class="note">
+<span class="lbl">Design rationale — F6.8</span>
+<p>Identify costs almost nothing and will be used constantly. The moment there are six
+identical cones on a pad and cone 4 reports a fault, somebody has to work out which one
+cone 4 is. Without this feature that means reading serial numbers off the underside of
+six units.</p>
+</div>
+
+<h3><span class="n">2.7</span>F7 — Administration</h3>
+<table class="ids">
+<thead><tr><th style="width:9%">ID</th><th style="width:24%">Feature</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>F7.1</td><td>Pad definition</td><td>Define the coordinate origin, the boundary polygon, the gather area, and the surveyed anchor positions</td></tr>
+<tr><td>F7.2</td><td>Fleet registration</td><td>Add, remove and rename cone units; assign identifiers</td></tr>
+<tr><td>F7.3</td><td>Calibration</td><td>Guided routines for wheel odometry scale, wheel track width, IMU bias, and anchor position refinement</td></tr>
+<tr><td>F7.4</td><td>Firmware update</td><td>Update every cone in the fleet from the coordinator, with version reporting</td></tr>
+<tr><td>F7.5</td><td>Diagnostics</td><td>Per-cone raw sensor view and manual jog control, for bring-up and fault finding</td></tr>
+<tr><td>F7.6</td><td>Defaults</td><td>Set default spacing, speed limits, position tolerance and geofence margin</td></tr>
+</tbody></table>
+
+<h3><span class="n">2.8</span>F8 — Data</h3>
+<table class="ids">
+<thead><tr><th style="width:9%">ID</th><th style="width:24%">Feature</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>F8.1</td><td>Session record</td><td>Which layouts were deployed, when, and how long each changeover took</td></tr>
+<tr><td>F8.2</td><td>Accuracy record</td><td>Commanded versus achieved position for every deployment</td></tr>
+<tr><td>F8.3</td><td>Export</td><td>Emit session and accuracy data as CSV or JSON</td></tr>
+</tbody></table>
+<div class="note good">
+<span class="lbl">Design rationale — F8.2</span>
+<p>The accuracy record exists for the capstone report as much as for the product. It is the
+mechanism that produces measured evidence for NFR-1 and NFR-3 in the verification matrix
+(§8). Build it early and <i>every test run from that point on generates report material
+automatically</i>, with no extra effort and no manual measurement.</p>
+</div>
+
+<h2 class="newpage"><span class="tocmk">QQ005QQ</span><span class="n">3</span>Standard exercise presets and fleet sizing</h2>
+<p>These presets define the geometry the system must be able to produce, and therefore fix
+the minimum fleet size and the required pad dimensions. All parameters are adjustable; the
+values given are the defaults shipped with the system.</p>
+<table>
+<thead><tr><th style="width:20%">Preset</th><th style="width:26%">Geometry</th><th style="width:10%">Cones</th><th>Default parameters</th></tr></thead>
+<tbody>
+<tr><td><b>Slalom</b></td><td>Single line of equally spaced cones</td><td>5</td><td>Pitch 9.0 m (range 5–15 m), entry offset</td></tr>
+<tr><td><b>Parallel parking</b></td><td>Bay marked by four corner cones, optional two lead-in</td><td>4–6</td><td>Bay 6.0 × 2.5 m</td></tr>
+<tr><td><b>Reverse bay parking</b></td><td>Two bay-defining lines</td><td>6</td><td>Bay 5.0 × 2.4 m, approach lane 4.0 m</td></tr>
+<tr><td><b>Three-point turn</b></td><td>Two parallel kerb lines</td><td>6</td><td>Road width 6.0 m, length 12 m</td></tr>
+<tr><td><b>Emergency lane change</b></td><td>Offset gates, ISO 3888-2 style</td><td>8–12</td><td>Gate widths derived from vehicle width; sections 12 / 13.5 / 11 / 12.5 / 12 m</td></tr>
+<tr><td><b>Circle / figure-of-eight</b></td><td>One or two circles</td><td>8–12</td><td>Radius 8.0 m</td></tr>
+<tr><td><b>Garage / 90° park</b></td><td>Three-sided bay</td><td>5</td><td>5.0 × 2.5 m</td></tr>
+</tbody></table>
+<div class="note warn">
+<span class="lbl">Consequence — fleet size</span>
+<p>The approved proposal does not state how many cones the fleet contains, yet that number
+determines cost, the pad area required, and the difficulty of the coordination problem.
+The presets above require between four and twelve.</p>
+<p><b>A fleet of six is adopted as the prototype baseline.</b> It covers the majority of
+the presets outright and degrades gracefully on the rest by increasing spacing. Two
+constraints follow, and both are binding on Part II: the software must impose <i>no fixed
+fleet limit</i> and must be verified in simulation at twelve (NFR-14); and where a layout
+needs more cones than are available, F1.7 must say so at authoring time and offer to
+increase the spacing instead of failing.</p>
+</div>
+
+<h2><span class="tocmk">QQ006QQ</span><span class="n">4</span>Use cases</h2>
+
+<div class="uc">
+<h4>UC-1 — Set up an exercise before a lesson</h4>
+<div class="meta"><b>Actor:</b> Instructor &nbsp;·&nbsp; <b>Precondition:</b> Fleet powered,
+localised and in the gather area &nbsp;·&nbsp; <b>Frequency:</b> Several times per day</div>
+<ol>
+<li>The instructor opens the tablet application; the live map shows six cones ready.</li>
+<li>The instructor opens the layout library and selects <b>Slalom</b>. <span class="fid">F2.3</span></li>
+<li>The instructor adjusts the pitch from 9.0 m to 12.0 m; the preview updates live. <span class="fid">F1.5, F1.6</span></li>
+<li>The system validates: five cones needed, six available, all points inside the boundary. <span class="fid">F1.7</span></li>
+<li>The instructor taps <b>Preview</b>; the system shows the assignment and an estimated 38 s. <span class="fid">F3.1</span></li>
+<li>The instructor confirms no vehicle is on the pad and taps <b>Execute</b>. <span class="fid">F3.2, F5.6</span></li>
+<li>Cones move; the map shows live progress. <span class="fid">F3.3</span></li>
+<li>All cones settle within tolerance; <b>READY</b> is displayed and the cones stop flashing. <span class="fid">F3.6</span></li>
+<li>The instructor begins the lesson.</li>
+</ol>
+<div class="alt"><span class="lbl">Alternate flows</span>
+<b>4a.</b> Fewer healthy cones than the layout needs → the system offers to increase the
+spacing or deploy a reduced version, and will not offer Execute until this is resolved.<br>
+<b>6a.</b> The vehicle interlock is set → Execute is disabled, with the reason shown.<br>
+<b>7a.</b> A cone stalls → an alert is raised; the remaining cones complete; the instructor
+may retry that cone, exclude it, or abort.
+</div>
+</div>
+
+<div class="uc">
+<h4>UC-2 — Change exercise mid-lesson</h4>
+<div class="meta"><b>Actor:</b> Instructor &nbsp;·&nbsp; <b>Precondition:</b> A layout is
+deployed and a lesson is in progress &nbsp;·&nbsp; <b>This is the project's headline
+demonstration</b></div>
+<ol>
+<li>The instructor stops the vehicle clear of the pad and sets the vehicle interlock to <i>clear</i>. <span class="fid">F5.6</span></li>
+<li>The instructor taps <b>Next Exercise</b> in the active lesson sequence. <span class="fid">F2.6</span></li>
+<li>The system computes the assignment from current positions to the new layout; cones already near a target keep it.</li>
+<li>The instructor taps <b>Execute</b>; the fleet reconfigures in under 60 s. <span class="fid">NFR-3</span></li>
+<li><b>READY</b> appears and the lesson continues.</li>
+</ol>
+<div class="alt"><span class="lbl">Why this one matters</span>
+Every other use case demonstrates a capability. This one demonstrates the <i>benefit</i> —
+the ten to fifteen minutes of lesson time recovered in §1.1. It should be the sequence
+performed live at the defence.</div>
+</div>
+
+<div class="uc">
+<h4>UC-3 — A cone is knocked over during an exercise</h4>
+<div class="meta"><b>Actors:</b> Cone, then Instructor &nbsp;·&nbsp; <b>Trigger:</b> Vehicle
+contact &nbsp;·&nbsp; <b>Frequency:</b> Routine, not exceptional</div>
+<ol>
+<li>A vehicle contacts a cone; the cone tips.</li>
+<li>The cone detects the tilt within 1 s, cuts motor drive and reports <code>TIPPED</code>. <span class="fid">F5.4</span></li>
+<li>The tablet raises an alert identifying which cone, and shows it on the map. <span class="fid">F4.4</span></li>
+<li>The instructor pauses the lesson and rights the cone by hand.</li>
+<li>The cone re-localises and reports <code>IDLE</code>.</li>
+<li>The instructor taps <b>Re-deploy</b>; only that cone returns to its target. <span class="fid">F3.8</span></li>
+<li><b>READY</b> returns.</li>
+</ol>
+<div class="alt"><span class="lbl">Design consequence</span>
+This use case imposes a hard constraint on Part II: <b>righting a cone by hand must be
+sufficient to recover it.</b> No tablet interaction, no power cycle, no re-pairing, no
+technician. Any design in which recovery needs more than step 4 fails this use case.</div>
+</div>
+
+<div class="uc">
+<h4>UC-4 — A cone's battery runs out mid-session</h4>
+<div class="meta"><b>Actors:</b> Cone, Coordinator, Instructor &nbsp;·&nbsp;
+<b>Precondition:</b> A session is in progress</div>
+<ol>
+<li>The cone reaches 20% charge → a warning alert is raised; the cone continues. <span class="fid">F6.7</span></li>
+<li>The cone reaches 10% → it refuses further assignments, informs the coordinator and requests recall.</li>
+<li>The coordinator excludes it from future assignments and warns the instructor that the effective fleet is now five.</li>
+<li>The instructor sends that cone to gather; F1.7 now validates all subsequent layouts against five cones.</li>
+</ol>
+<div class="alt"><span class="lbl">Design consequence</span>
+Fleet size is a <i>runtime</i> quantity, not a configuration constant. Every feature that
+depends on it — F1.7 above all — must read the count of currently healthy cones rather
+than the count of registered ones.</div>
+</div>
+
+<div class="uc">
+<h4>UC-5 — End of day</h4>
+<div class="meta"><b>Actors:</b> Instructor, Technician</div>
+<ol>
+<li>The instructor taps <b>Gather</b>. <span class="fid">F3.7</span></li>
+<li>All cones drive to the collection area, arrange themselves in a row and stop.</li>
+<li>The technician switches them off and puts them on charge.</li>
+</ol>
+</div>
+
+<div class="uc">
+<h4>UC-6 — First-time installation on a new pad</h4>
+<div class="meta"><b>Actor:</b> Technician &nbsp;·&nbsp; <b>Frequency:</b> Once per site,
+plus after any anchor is moved</div>
+<ol>
+<li>Mount four anchors on poles at the pad corners and survey their positions.</li>
+<li>Enter the anchor coordinates, define the origin, trace the boundary and mark the gather area. <span class="fid">F7.1</span></li>
+<li>Register each cone unit. <span class="fid">F7.2</span></li>
+<li>Run the guided calibration routines. <span class="fid">F7.3</span></li>
+<li>Run the verification layout and confirm the achieved accuracy meets §6. <span class="fid">F8.2</span></li>
+</ol>
+</div>
+
+<h2 class="newpage"><span class="tocmk">QQ007QQ</span><span class="n">5</span>The tablet application</h2>
+<p>Five screens. From anywhere in the application, the instructor must be able to reach an
+emergency stop without navigating — F5.1 is present on every screen, not on one of them.</p>
+
+<figure>
+<svg viewBox="0 0 700 396" xmlns="http://www.w3.org/2000/svg" font-family="Liberation Sans, Arial, sans-serif">
+ <rect x="1" y="1" width="698" height="394" rx="9" fill="#ffffff" stroke="#c3cbd2" stroke-width="1.6"/>
+ <!-- top bar -->
+ <path d="M1 10a9 9 0 0 1 9-9h680a9 9 0 0 1 9 9V42H1z" fill="#0f5666"/>
+ <text x="16" y="27" fill="#ffffff" font-size="12.5px" font-weight="700">Training Cone System</text>
+ <g font-size="11px">
+  <rect x="176" y="9" width="46" height="24" rx="4" fill="#ffffff" opacity=".18"/>
+  <text x="199" y="25" fill="#ffffff" font-weight="700" text-anchor="middle">Map</text>
+  <text x="253" y="25" fill="#cfe3e7" text-anchor="middle">Design</text>
+  <text x="316" y="25" fill="#cfe3e7" text-anchor="middle">Library</text>
+  <text x="378" y="25" fill="#cfe3e7" text-anchor="middle">Deploy</text>
+  <text x="434" y="25" fill="#cfe3e7" text-anchor="middle">Fleet</text>
+ </g>
+ <rect x="583" y="8" width="102" height="26" rx="13" fill="#c0392b" stroke="#8e3229" stroke-width="1.2"/>
+ <text x="634" y="25" fill="#ffffff" font-size="11px" font-weight="700" text-anchor="middle" letter-spacing=".9">E-STOP</text>
+ <!-- map panel -->
+ <rect x="12" y="52" width="466" height="272" rx="4" fill="#f5f8f9" stroke="#d6dbe0"/>
+ <g stroke="#e4eaed" stroke-width="1">
+  <path d="M12 106H478M12 160H478M12 214H478M12 268H478"/>
+  <path d="M90 52V324M168 52V324M246 52V324M324 52V324M402 52V324"/>
+ </g>
+ <rect x="26" y="64" width="438" height="248" rx="3" fill="none" stroke="#14707f" stroke-width="1.4" stroke-dasharray="6 4" opacity=".55"/>
+ <text x="34" y="78" fill="#7c8892" font-size="9px">pad boundary · 30 × 50 m</text>
+ <!-- gather area -->
+ <rect x="36" y="264" width="70" height="40" rx="3" fill="#e8f1ec" stroke="#c2dbcd"/>
+ <text x="71" y="288" fill="#2c6349" font-size="8.5px" text-anchor="middle">gather</text>
+ <!-- settled cones with ghost targets -->
+ <g>
+  <g transform="translate(150,120)"><circle r="9" fill="none" stroke="#14707f" stroke-dasharray="3 2.5" opacity=".5"/><path d="M-5.5 6 L0 -8 L5.5 6 z" fill="#e2732f"/></g>
+  <g transform="translate(216,150)"><circle r="9" fill="none" stroke="#14707f" stroke-dasharray="3 2.5" opacity=".5"/><path d="M-5.5 6 L0 -8 L5.5 6 z" fill="#e2732f"/></g>
+  <g transform="translate(282,180)"><circle r="9" fill="none" stroke="#14707f" stroke-dasharray="3 2.5" opacity=".5"/><path d="M-5.5 6 L0 -8 L5.5 6 z" fill="#e2732f"/></g>
+  <g transform="translate(348,210)"><circle r="9" fill="none" stroke="#14707f" stroke-dasharray="3 2.5" opacity=".5"/><path d="M-5.5 6 L0 -8 L5.5 6 z" fill="#e2732f"/></g>
+ </g>
+ <!-- one cone off target, deviation vector -->
+ <g>
+  <circle cx="414" cy="240" r="9" fill="none" stroke="#14707f" stroke-dasharray="3 2.5" opacity=".5"/>
+  <path d="M414 240 L392 262" stroke="#8e3229" stroke-width="1.6" marker-end="url(#uiArr)"/>
+  <g transform="translate(392,262)"><path d="M-5.5 6 L0 -8 L5.5 6 z" fill="#c0392b"/></g>
+  <text x="376" y="284" fill="#8e3229" font-size="8.5px">cone 5 · 0.31 m</text>
+ </g>
+ <defs><marker id="uiArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8e3229"/></marker></defs>
+ <!-- fleet panel -->
+ <rect x="490" y="52" width="198" height="272" rx="4" fill="#ffffff" stroke="#d6dbe0"/>
+ <text x="502" y="70" fill="#181c20" font-size="10.5px" font-weight="700">Fleet · 6 registered</text>
+ <g font-size="9px">
+  <rect x="502" y="78" width="52" height="17" rx="8.5" fill="#e8f1ec" stroke="#c2dbcd"/><text x="528" y="90" fill="#2c6349" text-anchor="middle" font-weight="700">5 ready</text>
+  <rect x="560" y="78" width="54" height="17" rx="8.5" fill="#f9ece9" stroke="#e8c8c2"/><text x="587" y="90" fill="#8e3229" text-anchor="middle" font-weight="700">1 offset</text>
+ </g>
+ <g font-size="9.5px" fill="#4a545e">
+  <path d="M500 106H678" stroke="#e8ecef"/>
+  <g><text x="502" y="120" font-weight="700" fill="#181c20">Cone 1</text><text x="576" y="120">98%</text><text x="622" y="120" fill="#2c6349">ready</text><path d="M500 128H678" stroke="#e8ecef"/></g>
+  <g><text x="502" y="142" font-weight="700" fill="#181c20">Cone 2</text><text x="576" y="142">94%</text><text x="622" y="142" fill="#2c6349">ready</text><path d="M500 150H678" stroke="#e8ecef"/></g>
+  <g><text x="502" y="164" font-weight="700" fill="#181c20">Cone 3</text><text x="576" y="164">91%</text><text x="622" y="164" fill="#2c6349">ready</text><path d="M500 172H678" stroke="#e8ecef"/></g>
+  <g><text x="502" y="186" font-weight="700" fill="#181c20">Cone 4</text><text x="576" y="186">88%</text><text x="622" y="186" fill="#2c6349">ready</text><path d="M500 194H678" stroke="#e8ecef"/></g>
+  <g><text x="502" y="208" font-weight="700" fill="#8e3229">Cone 5</text><text x="576" y="208">76%</text><text x="622" y="208" fill="#8e3229">offset</text><path d="M500 216H678" stroke="#e8ecef"/></g>
+  <g><text x="502" y="230" font-weight="700" fill="#181c20">Cone 6</text><text x="576" y="230">19%</text><text x="622" y="230" fill="#8f5a0d">low batt</text><path d="M500 238H678" stroke="#e8ecef"/></g>
+ </g>
+ <rect x="502" y="250" width="174" height="26" rx="4" fill="#eaf2f4" stroke="#bcd6dc"/>
+ <text x="589" y="267" fill="#0f5666" font-size="10px" font-weight="700" text-anchor="middle">Re-deploy cone 5</text>
+ <rect x="502" y="284" width="83" height="26" rx="4" fill="#ffffff" stroke="#d6dbe0"/>
+ <text x="543" y="301" fill="#4a545e" font-size="10px" text-anchor="middle">Identify</text>
+ <rect x="593" y="284" width="83" height="26" rx="4" fill="#ffffff" stroke="#d6dbe0"/>
+ <text x="634" y="301" fill="#4a545e" font-size="10px" text-anchor="middle">Gather</text>
+ <!-- ready banner -->
+ <rect x="12" y="334" width="676" height="46" rx="5" fill="#e8f1ec" stroke="#2c6349" stroke-width="1.6"/>
+ <circle cx="42" cy="357" r="11" fill="#2c6349"/>
+ <path d="M36.5 357 l4 4 l7.5 -8" stroke="#ffffff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+ <text x="64" y="353" fill="#2c6349" font-size="15px" font-weight="700" letter-spacing="1.2">READY</text>
+ <text x="64" y="369" fill="#3f6b58" font-size="9.5px">All cones in position and settled — the exercise may begin</text>
+ <text x="676" y="362" fill="#3f6b58" font-size="10px" text-anchor="end">Slalom · 12.0 m pitch · deployed 14:22</text>
+</svg>
+<figcaption><b>Figure 2.</b> The Map screen, the application's home. E-STOP is permanently
+present in the top bar (F5.1); READY is a full-width banner rather than an icon (F3.6);
+cone 5 has been displaced and its deviation vector and one-tap re-deploy are both visible
+(F3.8, F4.1). Cone 6 is below the 20% warning threshold (F6.7), so F1.7 will validate the
+next layout against five cones, not six.</figcaption>
+</figure>
+
+<table>
+<thead><tr><th style="width:14%">Screen</th><th style="width:40%">Contains</th><th>Features</th></tr></thead>
+<tbody>
+<tr><td><b>Map</b><br><small>home</small></td><td>Scaled plan of the pad, live cone positions, fleet status strip, persistent E-STOP</td><td class="fid">F4.1, F4.2, F4.3, F5.1</td></tr>
+<tr><td><b>Design</b></td><td>Drawing canvas, tool palette, spacing and dimension inputs, live feasibility banner</td><td class="fid">F1.1 – F1.9</td></tr>
+<tr><td><b>Library</b></td><td>Presets, saved layouts, lesson sequences</td><td class="fid">F2.1 – F2.6</td></tr>
+<tr><td><b>Deploy</b></td><td>Assignment preview, ETA, Execute / Pause / Abort, vehicle interlock toggle, READY banner</td><td class="fid">F3.1 – F3.8, F5.6</td></tr>
+<tr><td><b>Fleet</b></td><td>Per-cone detail, identify, alerts, event log, entry to diagnostics</td><td class="fid">F4.4, F4.5, F6.8, F7.5</td></tr>
+</tbody></table>
+
+<h3><span class="n">5.1</span>Interaction constraints</h3>
+<p>These follow from the operating environment in §1.5, not from taste. Each one is
+testable and each one is a defect if violated.</p>
+<ul>
+<li><b>Usable in direct sunlight.</b> High contrast throughout; large type; no thin
+light-grey text on white.</li>
+<li><b>Usable with gloves and wet hands.</b> Touch targets no smaller than 48 px; no hover
+states; no gestures requiring precision or two hands.</li>
+<li><b>Usable one-handed</b> while standing beside a vehicle.</li>
+<li><b>No destructive action without confirmation</b> — with exactly one exception. E-STOP
+must be instant and must never ask.</li>
+<li><b>Fleet state readable in under two seconds</b> from across a vehicle cabin. This is
+the reason READY is a banner and not an icon, and the reason the fleet summary is a row
+of counts rather than a list to be read.</li>
+</ul>
+
+<h2><span class="tocmk">QQ008QQ</span><span class="n">6</span>Non-functional requirements</h2>
+<p>These are the thresholds against which the system will be measured. §8 states how each
+is proved.</p>
+<table class="ids">
+<thead><tr><th style="width:9%">ID</th><th style="width:16%">Category</th><th>Requirement</th></tr></thead>
+<tbody>
+<tr><td>NFR-1</td><td>Accuracy</td><td>Achieved position within <b>15 cm RMS</b> of commanded, and within 25 cm at the 95th percentile</td></tr>
+<tr><td>NFR-2</td><td>Accuracy</td><td>Achieved heading within <b>10°</b>, where a heading is specified</td></tr>
+<tr><td>NFR-3</td><td>Performance</td><td>Full reconfiguration of six cones over a 20 × 20 m area in <b>≤ 60 s</b></td></tr>
+<tr><td>NFR-4</td><td>Performance</td><td>Instructor command to first cone movement ≤ 500 ms</td></tr>
+<tr><td>NFR-5</td><td>Performance</td><td>Live map updates at ≥ 5 Hz</td></tr>
+<tr><td>NFR-6</td><td>Reliability</td><td>Command link packet loss &lt; 2% at 50 m line of sight</td></tr>
+<tr><td>NFR-7</td><td>Reliability</td><td><b>Zero</b> cone-to-cone collisions in 20 consecutive reconfigurations</td></tr>
+<tr><td>NFR-8</td><td>Endurance</td><td>≥ 2 h of realistic session duty per charge</td></tr>
+<tr><td>NFR-9</td><td>Safety</td><td>Fleet halts within <b>500 ms</b> of E-STOP or of loss of communications</td></tr>
+<tr><td>NFR-10</td><td>Environmental</td><td>Operates 0–45 °C, in daylight, on dry to lightly wet asphalt</td></tr>
+<tr><td>NFR-11</td><td>Environmental</td><td>Survives repeated low-speed vehicle contact and being driven over; no exposed rigid edges</td></tr>
+<tr><td>NFR-12</td><td>Environmental</td><td>Ingress protection to at least IP54</td></tr>
+<tr><td>NFR-13</td><td>Usability</td><td>An instructor with no technical background deploys a preset within 5 minutes of first use, unaided</td></tr>
+<tr><td>NFR-14</td><td>Scalability</td><td>Software imposes no fixed fleet limit; verified in simulation at twelve cones</td></tr>
+<tr><td>NFR-15</td><td>Maintainability</td><td>A cone can be opened and its battery replaced with hand tools in under 5 minutes</td></tr>
+</tbody></table>
+<div class="note warn">
+<span class="lbl">Emphasis — NFR-11</span>
+<p>The proposal asks for "a stable and durable mechanical structure that protects the
+internal components while maintaining the appearance and function of a training cone." In
+engineering terms that means three things: the shell is <b>sacrificial and compliant</b>,
+the electronics are <b>mechanically isolated</b> from shell deformation, and the centre of
+mass is low enough that the unit either stays upright or is trivially righted by hand — a
+requirement that UC-3 makes binding. The severity of this requirement is the single
+largest driver of the mechanical design, and it is open question 5 in §10.</p>
+</div>
+
+<h2><span class="tocmk">QQ009QQ</span><span class="n">7</span>Prioritisation and the minimum demonstrable product</h2>
+
+<h3><span class="n">7.1</span>MoSCoW classification</h3>
+<table>
+<thead><tr><th style="width:15%">Priority</th><th>Features</th></tr></thead>
+<tbody>
+<tr><td><span class="pill must">Must</span><br><small>no project without these</small></td>
+<td class="fid">F1.1, F1.5, F1.7, F2.1, F2.2, F2.3, F3.1, F3.2, F3.3, F3.6, F4.1, F4.2, F5.1, F5.2, F5.3, F5.4, F5.7, F6.1, F6.2, F6.3, F6.4, F6.5, F6.6, F7.1, F7.2, F7.3</td></tr>
+<tr><td><span class="pill should">Should</span><br><small>expected in a complete system</small></td>
+<td class="fid">F1.2, F1.3, F1.4, F1.6, F1.8, F2.4, F3.4, F3.5, F3.7, F3.8, F4.3, F4.4, F4.5, F5.5, F5.6, F5.8, F6.7, F6.8, F7.5, F8.1, F8.2</td></tr>
+<tr><td><span class="pill could">Could</span><br><small>if time permits</small></td>
+<td class="fid">F1.9, F2.5, F2.6, F7.4, F7.6, F8.3</td></tr>
+<tr><td><span class="pill wont">Won't</span><br><small>not this project cycle</small></td>
+<td>See §9</td></tr>
+</tbody></table>
+<div class="note">
+<span class="lbl">Two deliberate anomalies in this table</span>
+<p><b>F2.6 is classified <i>Could</i> on effort, but it is the strongest demonstration
+feature in the catalogue</b> and is inexpensive once F2.2 and F3.2 exist. Promote it the
+moment the Must set closes — it is what UC-2 needs.</p>
+<p><b>F5.6 is classified <i>Should</i> only because it is trivial to implement</b>, not
+because it is optional. Every feature in F5 is mandatory (§2.5). The MoSCoW column
+measures build effort and sequencing; it does not grant permission to omit a safety
+feature.</p>
+</div>
+
+<h3><span class="n">7.2</span>Minimum demonstrable product</h3>
+<p>The subset that must work live, on hardware, at the defence:</p>
+<div class="demo">
+<span class="lbl">The four-minute sequence</span>
+<p>Four cones. The instructor loads the slalom preset, adjusts the spacing, previews and
+executes. The cones cross the area simultaneously without colliding and settle within
+tolerance. <b>READY</b> appears. The instructor loads a parking bay and executes again;
+the cones reconfigure. A cone is deliberately knocked over; the system detects it, alerts,
+and re-deploys it once it has been righted by hand. The instructor presses <b>E-STOP</b>
+mid-motion and everything halts.</p>
+</div>
+<p>That single sequence exercises F1.5, F1.7, F2.3, F3.1, F3.2, F3.6, F3.8, F4.1, F4.4,
+F5.1, F5.4 and F6.1 – F6.4 — effectively the whole Must set — in about four minutes, and
+it tells the story of §1.1 without a slide. <b>Build toward this sequence specifically,
+and rehearse it.</b> Anything that does not serve it, or serve the report, is not on the
+critical path.</p>
+
+<h2><span class="tocmk">QQ010QQ</span><span class="n">8</span>Verification</h2>
+<p>Every requirement needs a stated method of proof. "It looked like it worked" is not one,
+and neither is a single successful run. The evidence column names the artefact that ends
+up in the report.</p>
+<table>
+<thead><tr><th style="width:15%">Requirement</th><th style="width:44%">Method</th><th>Evidence produced</th></tr></thead>
+<tbody>
+<tr><td class="fid">NFR-1, NFR-2</td><td>30 deployments measured against the overhead-camera ground-truth rig (§14.2)</td><td>Error scatter plot and cumulative distribution, generated from F8.2 logs</td></tr>
+<tr><td class="fid">NFR-3</td><td>10 timed reconfigurations; worst case recorded, not the mean</td><td>Timing table</td></tr>
+<tr><td class="fid">NFR-4, NFR-5</td><td>Instrumented timestamps end to end</td><td>Latency histogram</td></tr>
+<tr><td class="fid">NFR-6</td><td>Packet counters at 10, 25 and 50 m</td><td>Loss-versus-distance chart</td></tr>
+<tr><td class="fid">NFR-7</td><td>20 consecutive reconfigurations, video reviewed frame by frame</td><td>Video plus event log</td></tr>
+<tr><td class="fid">NFR-8</td><td>Duty-cycle discharge test to the 10% cut-off</td><td>Discharge curve</td></tr>
+<tr><td class="fid">NFR-9</td><td>20 E-STOP events and 20 induced communications failures, timed</td><td>Stop-latency table</td></tr>
+<tr><td class="fid">NFR-13</td><td>Two instructors unfamiliar with the system, timed, unaided, not coached</td><td>Observation notes and completion times</td></tr>
+<tr><td class="fid">NFR-14</td><td>Simulated fleet of twelve</td><td>Simulation run log</td></tr>
+<tr><td class="fid">F5.3, F5.4, F5.5</td><td>Deliberate provocation of each condition, 10 trials each</td><td>Pass / fail table</td></tr>
+</tbody></table>
+<div class="note good">
+<span class="lbl">Sequencing consequence</span>
+<p>Two pieces of infrastructure in this table — the ground-truth rig and the F8.2 accuracy
+log — are prerequisites for most of the evidence, not by-products of it. §17 therefore
+requires both to exist by week 8 of the first semester, long before the measurements
+themselves are needed.</p>
+</div>
+
+<h2><span class="tocmk">QQ011QQ</span><span class="n">9</span>Explicitly out of scope</h2>
+<p>Stating these protects the project from scope creep and pre-empts the panel's questions.
+Each is a reasonable extension; none is in this cycle.</p>
+<table class="compact">
+<thead><tr><th style="width:34%">Excluded</th><th>Reasoning</th></tr></thead>
+<tbody>
+<tr><td><b>Autonomous obstacle mapping</b></td><td>The pad is assumed open and known. Cones avoid <i>each other</i>, not arbitrary unmapped obstacles</td></tr>
+<tr><td><b>Vehicle detection or tracking</b></td><td>The system does not sense the training vehicle. The interlock (F5.6) is set by the instructor, never inferred — an inferred interlock that fails is worse than none</td></tr>
+<tr><td><b>Operating while a vehicle moves on the pad</b></td><td>Cones move only between exercises. This is a safety boundary, not a capability gap</td></tr>
+<tr><td><b>Automatic charging or docking</b></td><td>Gather (F3.7) brings cones to a collection point; a human connects the charger</td></tr>
+<tr><td><b>Night, heavy rain, snow or ice</b></td><td>Outside the assumed environment of §1.5</td></tr>
+<tr><td><b>Multiple simultaneous instructors or pads</b></td><td>One coordinator serves one pad and one instructor</td></tr>
+<tr><td><b>Kerbs, grass or gravel</b></td><td>The drivetrain is specified for flat paved surfaces only</td></tr>
+<tr><td><b>Regulatory certification</b></td><td>The unit is not certified as road furniture</td></tr>
+</tbody></table>
+
+<h2><span class="tocmk">QQ012QQ</span><span class="n">10</span>Open questions for the advisor</h2>
+<p>These five questions change the specification. <b>They should be closed before the
+design freeze in week 2</b>, because each of them invalidates work if answered late.</p>
+<table>
+<thead><tr><th style="width:5%">#</th><th style="width:33%">Question</th><th>What changes with the answer</th></tr></thead>
+<tbody>
+<tr><td><b>1</b></td><td><b>What is the prototype fleet size?</b> §3 argues for six.</td><td>Budget, pad area, and the difficulty of the coordination problem. If the budget covers fewer, the balance is simulated and §7.2 still holds — it needs only four</td></tr>
+<tr><td><b>2</b></td><td><b>What are the pad dimensions and surface, and is there a specific site?</b></td><td>The choice of localisation technology, which is the project's highest-risk subsystem (§11.2)</td></tr>
+<tr><td><b>3</b></td><td><b>Is an indoor demonstration acceptable?</b></td><td>The largest single lever in the project. Indoors, an overhead camera gives roughly 1 cm accuracy for the cost of one camera, and the highest-risk subsystem becomes cheap, accurate and quick. Outdoors, that fails and UWB is required</td></tr>
+<tr><td><b>4</b></td><td><b>Is heading control required, or is position sufficient?</b></td><td>Cones are rotationally symmetric, so heading matters only for asymmetric markers. If it is not required, NFR-2 and a substantial slice of the localisation work disappear</td></tr>
+<tr><td><b>5</b></td><td><b>Must a cone survive being driven over, or only bumped?</b></td><td>The severity of NFR-11, and with it the entire mechanical concept — shell material, isolation strategy and mass budget</td></tr>
+</tbody></table>
+<div class="note warn">
+<span class="lbl">Recommended action</span>
+<p>Questions 3 and 4 together can remove the majority of the project's technical risk at no
+cost to its academic value. They should be put to the advisor first, and in that order.</p>
+</div>
+
+<!-- ============ PART II ============ -->
+<h1 class="part"><span class="tocmk">QQ013QQ</span>Part II — System Architecture<span class="pt">Part II</span></h1>
+
+<p class="lead">Part I states what the system must do. This part states one defensible way
+of achieving it, and argues each choice against the alternatives that were rejected. The
+requirements are not restated here; §6 and §8 remain the reference.</p>
+
+<h2><span class="tocmk">QQ014QQ</span><span class="n">11</span>The four decisions that define the architecture</h2>
+<p>Everything else follows from these four. Each is argued rather than asserted, because a
+defence panel will ask why not the other one.</p>
+
+<h3><span class="n">11.1</span>Where does the intelligence live?</h3>
+<table class="compact">
+<thead><tr><th style="width:30%">Option</th><th>Assessment</th></tr></thead>
+<tbody>
+<tr><td><b>Fully centralised</b><br><small>coordinator computes wheel speeds; cones are radio-controlled motors</small></td><td>Simple to reason about, but every packet loss becomes a control-loop dropout, and F5.2 cannot be satisfied on the cone because the cone has no notion of its own goal</td></tr>
+<tr><td><b>Fully decentralised</b><br><small>each cone runs local swarm rules — potential fields, flocking</small></td><td>Superficially the more impressive "swarm" answer, but position assignment becomes emergent and therefore unrepeatable. A driving exercise is a <i>specified</i> geometry, not an emergent one, and NFR-1 is stated in centimetres</td></tr>
+<tr><td><b>Hybrid</b><br><small>coordinator does assignment and global avoidance; cone does pose control and reflexes</small></td><td><b>Chosen.</b> See below</td></tr>
+</tbody></table>
+<p>The coordinator owns everything global — who goes where, whose path yields to whose.
+Each cone owns everything local and fast: wheel PID, goal seeking, emergency stop, tip
+detection, communications watchdog.</p>
+<div class="note">
+<span class="lbl">Why this split, specifically</span>
+<p><b>Safety does not cross the radio.</b> If the coordinator dies, cones coast to a stop
+on their own watchdog (F5.2). Every reflex in §2.5 remains effective with the link down,
+which is exactly the property NFR-9 demands.</p>
+<p><b>It maps onto the team.</b> One student can own the coordinator without touching
+firmware, and another can own firmware without touching the planner — see §15. An
+architecture that forces two students into the same file every week is a scheduling
+hazard, not just an engineering one.</p>
+</div>
+
+<h3><span class="n">11.2</span>How does a cone know where it is?</h3>
+<p>This is the highest-risk subsystem in the project. If localisation is poor, nothing
+downstream can recover — NFR-1, NFR-3 and NFR-7 all rest on it — so it warrants the most
+analysis and the earliest measurement.</p>
+<table class="compact">
+<thead><tr><th style="width:23%">Method</th><th style="width:13%">Accuracy</th><th style="width:12%">Cost / cone</th><th style="width:11%">Outdoors</th><th style="width:11%">Heading</th><th>Working area</th></tr></thead>
+<tbody>
+<tr><td>Wheel odometry + IMU alone</td><td>drifts without bound</td><td>≈ $10</td><td>yes</td><td>yes, drifting</td><td>unlimited</td></tr>
+<tr><td>Overhead camera + ArUco markers</td><td><b>1–3 cm</b></td><td>≈ $0<br><small>one camera total</small></td><td><b>poorly</b><br><small>sun, shadow</small></td><td><b>yes, directly</b></td><td>≈ 12 × 9 m per camera</td></tr>
+<tr><td><b>UWB trilateration (DW3000)</b></td><td>10–30 cm</td><td>≈ $20</td><td><b>yes</b></td><td>no</td><td><b>≈ 100 m</b></td></tr>
+<tr><td>RTK-GPS (u-blox ZED-F9P)</td><td>2 cm</td><td>≈ $250</td><td>yes<br><small>needs sky view</small></td><td>no</td><td>unlimited</td></tr>
+<tr><td>Ultrasonic / IR beacons</td><td>10–50 cm, noisy</td><td>≈ $15</td><td>marginal</td><td>no</td><td>≈ 10 m</td></tr>
+</tbody></table>
+<p>The environment assumed in §1.5 — 30 × 50 m of open asphalt in daylight — eliminates the
+overhead camera as the <i>deployed</i> solution and makes RTK-GPS unaffordable across six
+or more units. UWB is the only remaining option that is both outdoor-capable and cheap
+enough to fit to every cone.</p>
+<p><b>Chosen: a DW3000-class UWB tag on each cone, trilaterated against four surveyed
+anchors, fused with wheel odometry and a gyroscope in an Extended Kalman Filter.</b></p>
+
+<h4>Three consequences the team must plan around</h4>
+<table class="compact">
+<thead><tr><th style="width:26%">Consequence</th><th>Detail and mitigation</th></tr></thead>
+<tbody>
+<tr><td><b>UWB gives position, not heading</b></td><td>Recover heading from the gyroscope, corrected by the direction of travel — a differential-drive robot moving forward is, by construction, pointing where it is going. Correct gyro bias whenever speed exceeds 0.3 m/s. <i>Contingency:</i> a second tag 25 cm from the first gives heading directly; it doubles tag cost, so it is the fallback, not the baseline. Open question 4 in §10 may remove this problem entirely</td></tr>
+<tr><td><b>Update rate falls as cones are added</b></td><td>With two-way ranging, one fix costs roughly 3 ms per anchor, so about 12 ms for four anchors. Under TDMA that is ≈ 13 Hz at six cones and ≈ 8 Hz at ten. Acceptable for the target fleet. <i>Scaling path:</i> migrate to TDoA — tags transmit, synchronised anchors listen — which scales to 100+ tags. Document this in the report; forward-looking analysis of a limit you have measured is worth more than avoiding the limit</td></tr>
+<tr><td><b>Cones are low</b></td><td>A cone stands about 50 cm tall, so its tag sits near the ground where multipath off asphalt is worst. Mount anchors on 3–4 m poles, and never place all four near-collinear — poor geometry (high GDOP) ruins trilateration even with perfect range measurements</td></tr>
+</tbody></table>
+<div class="note good">
+<span class="lbl">Use the camera anyway — as an instrument, not as the product</span>
+<p>During development, an indoor rig with a 1080p camera at 6 m and an ArUco marker on each
+cone lid yields roughly 1 cm absolute pose. That is the reference against which the
+UWB + EKF stack is <i>measured</i> to produce the numbers NFR-1 requires. A 90° camera at
+6 m covers about 12 × 9 m; at 1920 px across 12 m, one pixel is 6.25 mm, and sub-pixel
+marker fitting does the rest.</p>
+<p>Building a validation instrument, rather than eyeballing a tape measure, is what
+separates a strong capstone from an average one — and it is the same rig that answers open
+question 3 if the project moves indoors.</p>
+</div>
+
+<h3 class="newpage"><span class="n">11.3</span>How do cones talk?</h3>
+<table class="compact">
+<thead><tr><th style="width:19%">Option</th><th style="width:15%">Latency</th><th style="width:14%">Range</th><th style="width:12%">Payload</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td><b>ESP-NOW</b></td><td><b>2–5 ms</b></td><td>200 m LOS</td><td>250 B</td><td>Connectionless, needs no access point, native broadcast</td></tr>
+<tr><td>Wi-Fi UDP via an AP</td><td>10–50 ms, jittery</td><td>≈ 50 m</td><td>large</td><td>Requires infrastructure in the middle of an asphalt pad</td></tr>
+<tr><td>BLE</td><td>20–100 ms</td><td>30 m</td><td>small</td><td>Connection-oriented; poor for one-to-many</td></tr>
+<tr><td>LoRa</td><td>100–1000 ms</td><td>kilometres</td><td>tiny</td><td>Far too slow for a 10 Hz control loop</td></tr>
+</tbody></table>
+<p>ESP-NOW wins the control link outright. But the tablet needs ordinary Wi-Fi, and an
+ESP32 cannot sit on an access point's chosen Wi-Fi channel while running ESP-NOW on a
+different one: <b>ESP-NOW and Wi-Fi station mode must share a radio channel.</b> Fighting
+that constraint in firmware is a classic and avoidable time sink.</p>
+<p><b>Chosen: do not fight it — separate the radios physically.</b></p>
+
+<figure>
+<svg viewBox="0 0 700 316" xmlns="http://www.w3.org/2000/svg" font-family="Liberation Sans, Arial, sans-serif">
+ <defs>
+  <marker id="ar" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0f5666"/></marker>
+  <marker id="arD" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#14707f"/></marker>
+  <marker id="arG" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8f5a0d"/></marker>
+ </defs>
+ <!-- domain separator -->
+ <path d="M346 74 V308" stroke="#c3cbd2" stroke-width="1" stroke-dasharray="4 4"/>
+ <text x="338" y="304" fill="#8a939d" font-size="9px" text-anchor="end">host domain · Wi-Fi</text>
+ <text x="354" y="304" fill="#8a939d" font-size="9px">field domain · ESP-NOW ch 1</text>
+
+ <!-- tablet -->
+ <rect x="6" y="176" width="128" height="58" rx="5" fill="#eaf2f4" stroke="#0f5666" stroke-width="1.4"/>
+ <text x="70" y="200" font-size="12px" font-weight="700" fill="#0f5666" text-anchor="middle">Instructor tablet</text>
+ <text x="70" y="216" font-size="9.5px" fill="#4a545e" text-anchor="middle">browser · any device</text>
+ <!-- coordinator -->
+ <rect x="180" y="176" width="140" height="58" rx="5" fill="#0f5666"/>
+ <text x="250" y="199" font-size="12px" font-weight="700" fill="#ffffff" text-anchor="middle">Coordinator</text>
+ <text x="250" y="215" font-size="9.5px" fill="#bcd6dc" text-anchor="middle">laptop or Raspberry Pi</text>
+ <!-- gateway -->
+ <rect x="366" y="176" width="112" height="58" rx="5" fill="#eaf2f4" stroke="#0f5666" stroke-width="1.4"/>
+ <text x="422" y="199" font-size="12px" font-weight="700" fill="#0f5666" text-anchor="middle">Gateway</text>
+ <text x="422" y="215" font-size="9.5px" fill="#4a545e" text-anchor="middle">bare ESP32</text>
+ <!-- arrows -->
+ <path d="M136 205 H176" stroke="#0f5666" stroke-width="1.6" marker-end="url(#ar)"/>
+ <text x="156" y="196" font-size="8.5px" fill="#4a545e" text-anchor="middle">WebSocket</text>
+ <text x="156" y="224" font-size="8.5px" fill="#8a939d" text-anchor="middle">JSON</text>
+ <path d="M322 205 H362" stroke="#0f5666" stroke-width="1.6" marker-end="url(#ar)"/>
+ <text x="342" y="196" font-size="8.5px" fill="#4a545e" text-anchor="middle">USB</text>
+ <text x="342" y="224" font-size="8.5px" fill="#8a939d" text-anchor="middle">serial</text>
+ <!-- cones -->
+ <g>
+  <rect x="528" y="112" width="166" height="48" rx="5" fill="#ffffff" stroke="#0f5666" stroke-width="1.3"/>
+  <path d="M546 146 L556 118 L566 146 z" fill="#e2732f"/>
+  <text x="578" y="133" font-size="11.5px" font-weight="700" fill="#181c20">Cone 1</text>
+  <text x="578" y="147" font-size="8.8px" fill="#5d6874">UWB · EKF · PID · reflexes</text>
+ </g>
+ <g>
+  <rect x="528" y="174" width="166" height="48" rx="5" fill="#ffffff" stroke="#0f5666" stroke-width="1.3"/>
+  <path d="M546 208 L556 180 L566 208 z" fill="#e2732f"/>
+  <text x="578" y="195" font-size="11.5px" font-weight="700" fill="#181c20">Cone 2</text>
+  <text x="578" y="209" font-size="8.8px" fill="#5d6874">UWB · EKF · PID · reflexes</text>
+ </g>
+ <g>
+  <rect x="528" y="236" width="166" height="48" rx="5" fill="#ffffff" stroke="#0f5666" stroke-width="1.3"/>
+  <path d="M546 270 L556 242 L566 270 z" fill="#e2732f"/>
+  <text x="578" y="257" font-size="11.5px" font-weight="700" fill="#181c20">Cone N</text>
+  <text x="578" y="271" font-size="8.8px" fill="#5d6874">UWB · EKF · PID · reflexes</text>
+ </g>
+ <!-- espnow fan -->
+ <g stroke="#14707f" stroke-width="1.5" stroke-dasharray="5 3.5" fill="none">
+  <path d="M482 200 C 504 200, 502 136, 524 136" marker-end="url(#arD)"/>
+  <path d="M482 205 H524" marker-end="url(#arD)"/>
+  <path d="M482 210 C 504 210, 502 260, 524 260" marker-end="url(#arD)"/>
+ </g>
+ <text x="504" y="292" font-size="8.5px" fill="#14707f" text-anchor="middle" font-weight="700">ESP-NOW</text>
+ <text x="504" y="303" font-size="8px" fill="#8a939d" text-anchor="middle">2–5 ms</text>
+ <!-- anchors -->
+ <rect x="528" y="14" width="166" height="46" rx="5" fill="#fbf2e2" stroke="#8f5a0d" stroke-width="1.3"/>
+ <text x="611" y="33" font-size="11.5px" font-weight="700" fill="#8f5a0d" text-anchor="middle">4 × UWB anchors</text>
+ <text x="611" y="48" font-size="8.8px" fill="#7a6236" text-anchor="middle">surveyed · on 3–4 m poles</text>
+ <g stroke="#8f5a0d" stroke-width="1.3" stroke-dasharray="4 3" fill="none" opacity=".8">
+  <path d="M560 62 C 520 70, 508 76, 508 100 V 268"/>
+  <path d="M508 136 H524" marker-end="url(#arG)"/>
+  <path d="M508 198 H524" marker-end="url(#arG)"/>
+  <path d="M508 260 H524" marker-end="url(#arG)"/>
+ </g>
+ <text x="470" y="103" font-size="8.5px" fill="#8f5a0d" font-weight="700" text-anchor="end" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">two-way ranging</text>
+</svg>
+<figcaption><b>Figure 3.</b> System topology. The gateway is a bare ESP32 doing one job —
+serial frames in, ESP-NOW out, and back — so it owns the radio channel exclusively while
+the coordinator host is free to serve Wi-Fi to the tablet. Each half is independently
+testable, which matters when two different students own them (§15).</figcaption>
+</figure>
+
+<h3><span class="n">11.4</span>How do cones avoid each other?</h3>
+<p>Six cones crossing a 20 m pad simultaneously is a genuine multi-robot motion planning
+problem, not an implementation detail. NFR-7 permits zero collisions.</p>
+<table class="compact">
+<thead><tr><th style="width:32%">Approach</th><th>Assessment</th></tr></thead>
+<tbody>
+<tr><td>Artificial potential fields</td><td>Quick to write, but suffers local minima and oscillates in narrow passes. Not defensible against a panel that knows the literature</td></tr>
+<tr><td>Prioritised / sequenced planning<br><small>one cone moves at a time</small></td><td>Trivially safe, and trivially fails NFR-3: six cones crossing 20 m one after another exhausts the 60 s budget on travel alone</td></tr>
+<tr><td>Time–space reservation<br><small>grid plus time windows</small></td><td>Sound, but the discretisation is coarse relative to a 15 cm accuracy target and replanning after a disturbance is expensive</td></tr>
+<tr><td><b>ORCA — reciprocal velocity obstacles</b></td><td><b>Chosen.</b> Continuous rather than discretised, runs at kilohertz rates for six agents, collision-free under its stated assumptions, and is the standard citation in the field</td></tr>
+</tbody></table>
+<p>ORCA assumes holonomic agents. Differential-drive cones are not holonomic, so the ORCA
+output velocity is wrapped by a unicycle controller that converts a desired
+(<i>v<sub>x</sub></i>, <i>v<sub>y</sub></i>) into (<i>v</i>, <i>ω</i>) with a bounded turn
+rate — the standard treatment, in which the effective agent radius is inflated to cover
+the turning transient.</p>
+
+<h4>Size the safety radius from the measured latency, not from a guess</h4>
+<div class="bars">
+ <div class="row"><div class="lab">UWB fix interval</div>
+  <div class="track"><div class="seg" style="width:42.1%;background:#8f5a0d"></div></div>
+  <div class="val">≈ 80 ms</div></div>
+ <div class="row"><div class="lab">Coordinator cycle</div>
+  <div class="track"><div class="seg" style="width:52.6%;background:#0f5666"></div></div>
+  <div class="val">100 ms</div></div>
+ <div class="row"><div class="lab">ESP-NOW + firmware</div>
+  <div class="track"><div class="seg" style="width:5.3%;background:#14707f"></div></div>
+  <div class="val">≈ 10 ms</div></div>
+ <div class="row tot"><div class="lab" style="color:#181c20;font-weight:700">Worst-case staleness</div>
+  <div class="track"><div class="seg" style="width:42.1%;background:#8f5a0d"></div><div class="seg" style="width:52.6%;background:#0f5666"></div><div class="seg" style="width:5.3%;background:#14707f"></div></div>
+  <div class="val">190 ms</div></div>
+</div>
+<p>At 0.8 m/s, 190 ms is 15 cm of travel the planner cannot see. The safety radius must
+cover it:</p>
+<div class="note">
+<span class="lbl">Derived parameters</span>
+<p><b>r<sub>safety</sub></b> = r<sub>cone</sub> (0.20 m) + <i>v</i> · t<sub>stale</sub>
+(0.15 m) + margin (0.20 m) ≈ 0.55 m → <b>use 0.60 m</b><br>
+<b>v<sub>max</sub></b> = <b>0.80 m/s</b> during coordinated motion, reduced to
+<b>0.30 m/s</b> within 1 m of the goal (which also serves NFR-1, since terminal accuracy
+degrades with approach speed)</p>
+<p>Independently of all of this, each cone runs a reflex layer: if the forward
+time-of-flight sensor reads under 40 cm, brake — regardless of what the coordinator says
+(F5.5). <b>ORCA is the plan; the reflex is the seatbelt.</b></p>
+</div>
+
+<h2 class="newpage"><span class="tocmk">QQ015QQ</span><span class="n">12</span>Software decomposition</h2>
+
+<figure>
+<svg viewBox="0 0 700 306" xmlns="http://www.w3.org/2000/svg" font-family="Liberation Sans, Arial, sans-serif">
+ <defs>
+  <marker id="fa" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0f5666"/></marker>
+  <marker id="fb" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a939d"/></marker>
+  <style>
+   .mod{fill:#ffffff;stroke:#bcd6dc;stroke-width:1.1}
+   .mt{font-size:10px;fill:#181c20;font-weight:700}
+   .ms{font-size:8.4px;fill:#5d6874}
+   .bl{font-size:10.5px;font-weight:700;fill:#0f5666}
+   .bs{font-size:8.4px;fill:#8a939d}
+  </style>
+ </defs>
+ <!-- band 1 -->
+ <rect x="0" y="4" width="700" height="64" rx="5" fill="#f5f8f9" stroke="#dfe5e8"/>
+ <rect x="0" y="4" width="4.5" height="64" rx="2" fill="#0f5666"/>
+ <text class="bl" x="14" y="28">Tablet</text><text class="bs" x="14" y="42">web app</text>
+ <text class="bs" x="14" y="56">any browser</text>
+ <g>
+  <rect class="mod" x="112" y="16" width="128" height="40" rx="4"/><text class="mt" x="124" y="34">Canvas editor</text><text class="ms" x="124" y="47">draw · dimension · validate</text>
+  <rect class="mod" x="252" y="16" width="118" height="40" rx="4"/><text class="mt" x="264" y="34">Live map</text><text class="ms" x="264" y="47">poses · deviation</text>
+  <rect class="mod" x="382" y="16" width="112" height="40" rx="4"/><text class="mt" x="394" y="34">Library</text><text class="ms" x="394" y="47">presets · lessons</text>
+  <rect class="mod" x="506" y="16" width="182" height="40" rx="4"/><text class="mt" x="518" y="34">Deploy controls + E-STOP</text><text class="ms" x="518" y="47">preview · execute · interlock</text>
+ </g>
+ <!-- band 2 -->
+ <rect x="0" y="96" width="700" height="106" rx="5" fill="#eaf2f4" stroke="#bcd6dc"/>
+ <rect x="0" y="96" width="4.5" height="106" rx="2" fill="#0f5666"/>
+ <text class="bl" x="14" y="122">Coordinator</text><text class="bs" x="14" y="136">Python</text>
+ <text class="bs" x="14" y="150">10 Hz cycle</text>
+ <g>
+  <rect class="mod" x="112" y="106" width="146" height="42" rx="4"/><text class="mt" x="124" y="124">Layout compiler</text><text class="ms" x="124" y="138">drawing → target points</text>
+  <rect class="mod" x="270" y="106" width="146" height="42" rx="4"/><text class="mt" x="282" y="124">Assignment</text><text class="ms" x="282" y="138">bottleneck matching</text>
+  <rect class="mod" x="428" y="106" width="146" height="42" rx="4"/><text class="mt" x="440" y="124">ORCA planner</text><text class="ms" x="440" y="138">reciprocal avoidance</text>
+  <rect class="mod" x="112" y="156" width="146" height="38" rx="4"/><text class="mt" x="124" y="174">Fleet state</text><text class="ms" x="124" y="187">health · staleness · log</text>
+  <rect class="mod" x="270" y="156" width="146" height="38" rx="4"/><text class="mt" x="282" y="174">Gateway driver</text><text class="ms" x="282" y="187">serial framing</text>
+  <rect x="428" y="156" width="146" height="38" rx="4" fill="#e8f1ec" stroke="#2c6349" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <text class="mt" x="440" y="174" fill="#2c6349">Simulator</text><text class="ms" x="440" y="187" fill="#3f6b58">swaps in for the gateway</text>
+ </g>
+ <text x="588" y="128" font-size="8.6px" fill="#0f5666" font-weight="700">One cone interface,</text>
+ <text x="588" y="141" font-size="8.6px" fill="#0f5666" font-weight="700">two implementations —</text>
+ <text x="588" y="154" font-size="8.6px" fill="#5d6874">the planner cannot</text>
+ <text x="588" y="166" font-size="8.6px" fill="#5d6874">tell them apart (§14.1)</text>
+ <!-- band 3 -->
+ <rect x="0" y="230" width="700" height="70" rx="5" fill="#f5f8f9" stroke="#dfe5e8"/>
+ <rect x="0" y="230" width="4.5" height="70" rx="2" fill="#0f5666"/>
+ <text class="bl" x="14" y="256">Cone</text><text class="bs" x="14" y="270">firmware</text>
+ <text class="bs" x="14" y="284">ESP32-S3</text>
+ <g>
+  <rect class="mod" x="112" y="244" width="104" height="42" rx="4"/><text class="mt" x="124" y="262">UWB ranging</text><text class="ms" x="124" y="276">≈ 13 Hz</text>
+  <rect class="mod" x="228" y="244" width="104" height="42" rx="4"/><text class="mt" x="240" y="262">EKF fusion</text><text class="ms" x="240" y="276">+ odom + IMU</text>
+  <rect class="mod" x="344" y="244" width="116" height="42" rx="4"/><text class="mt" x="356" y="262">Motion control</text><text class="ms" x="356" y="276">unicycle · 50 Hz</text>
+  <rect class="mod" x="472" y="244" width="98" height="42" rx="4"/><text class="mt" x="484" y="262">Wheel PID</text><text class="ms" x="484" y="276">× 2 · 200 Hz</text>
+  <rect x="582" y="244" width="106" height="42" rx="4" fill="#f9ece9" stroke="#8e3229" stroke-width="1.2"/>
+  <text class="mt" x="594" y="262" fill="#8e3229">Safety layer</text><text class="ms" x="594" y="276" fill="#8e3229">watchdog · tilt</text>
+ </g>
+ <!-- connectors -->
+ <path d="M320 68 V102" stroke="#0f5666" stroke-width="1.5" marker-end="url(#fa)"/>
+ <text x="328" y="88" font-size="8.4px" fill="#4a545e">commands</text>
+ <path d="M180 202 V226" stroke="#0f5666" stroke-width="1.5" marker-end="url(#fa)"/>
+ <text x="188" y="218" font-size="8.4px" fill="#4a545e">setpoints @ 10 Hz</text>
+ <path d="M636 226 V206" stroke="#8a939d" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#fb)"/>
+ <path d="M636 92 V72" stroke="#8a939d" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#fb)"/>
+ <text x="644" y="216" font-size="8.4px" fill="#5d6874">telemetry</text>
+ <text x="644" y="86" font-size="8.4px" fill="#5d6874">live state</text>
+</svg>
+<figcaption><b>Figure 4.</b> Software decomposition across the three tiers. The green
+dashed block is the point of the whole arrangement: the simulator and the real gateway
+implement the same cone interface, so the coordinator, the planner and the entire tablet
+application can be developed and tested with no hardware present (§14.1).</figcaption>
+</figure>
+
+<h3><span class="n">12.1</span>Coordinator responsibilities</h3>
+<table class="compact">
+<thead><tr><th style="width:17%">Module</th><th style="width:24%">Input</th><th style="width:23%">Output</th><th>Method</th></tr></thead>
+<tbody>
+<tr><td><b>Layout compiler</b></td><td>Polyline or spline from the tablet, in pad coordinates</td><td>Ordered list of target points</td><td>Arc-length resampling at the configured spacing (default 2.0 m); rejects the layout when points required exceed cones available (F1.7)</td></tr>
+<tr><td><b>Assignment</b></td><td><i>N</i> cone poses, <i>M</i> ≤ <i>N</i> targets</td><td>Cone → target mapping</td><td><b>Bottleneck</b> (min–max) assignment — see below</td></tr>
+<tr><td><b>Planner</b></td><td>Assignment plus live poses</td><td>Per-cone velocity command at 10 Hz</td><td>ORCA at r = 0.60 m; plain goal-seeking when no neighbour is within range</td></tr>
+<tr><td><b>Fleet state</b></td><td>Telemetry stream</td><td>Health view, staleness flags, event log</td><td>Per-cone sequence numbers and last-heard timestamps</td></tr>
+</tbody></table>
+<div class="note">
+<span class="lbl">Why bottleneck assignment rather than the usual Hungarian minimum-sum</span>
+<p>The layout is not ready until the <i>last</i> cone arrives (F3.6). Minimising the total
+distance travelled can leave one cone with a long haul while five sit idle; minimising the
+<i>maximum</i> single distance is what actually minimises reconfiguration time, which is
+what NFR-3 measures. Solve it by binary search over a distance threshold with a bipartite
+feasibility check at each step.</p>
+<p><b>Implement minimum-sum first</b> — in Python it is one call to
+<code>scipy.optimize.linear_sum_assignment</code> — then measure it, then show the
+bottleneck variant beating it on NFR-3. That comparison is a report figure on its own, and
+it costs an afternoon.</p>
+</div>
+
+<h3><span class="n">12.2</span>Cone firmware — state machine</h3>
+<figure>
+<svg viewBox="0 0 700 252" xmlns="http://www.w3.org/2000/svg" font-family="Liberation Sans, Arial, sans-serif">
+ <defs>
+  <marker id="sa" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0f5666"/></marker>
+  <marker id="sr" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8e3229"/></marker>
+  <marker id="sg" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a939d"/></marker>
+  <style>.st{fill:#eaf2f4;stroke:#0f5666;stroke-width:1.3}
+         .sn{font-size:10.5px;font-weight:700;fill:#0f5666;text-anchor:middle}
+         .lb{font-size:7.8px;fill:#5d6874;text-anchor:middle;paint-order:stroke;stroke:#ffffff;stroke-width:3px;stroke-linejoin:round}</style>
+ </defs>
+ <!-- back transitions, drawn first so boxes sit on top -->
+ <g stroke="#0f5666" stroke-width="1.4" fill="none">
+  <path d="M526 102 C 526 74, 408 74, 408 100" marker-end="url(#sa)"/>
+  <path d="M644 102 C 644 50, 408 50, 408 98" marker-end="url(#sa)"/>
+ </g>
+ <text class="lb" x="467" y="42">new setpoint</text>
+ <!-- states -->
+ <g>
+  <rect class="st" x="8"   y="104" width="92" height="40" rx="5"/><text class="sn" x="54"  y="128">BOOT</text>
+  <rect class="st" x="126" y="104" width="92" height="40" rx="5"/><text class="sn" x="172" y="122">LOCAL-</text><text class="sn" x="172" y="134">ISING</text>
+  <rect class="st" x="244" y="104" width="92" height="40" rx="5"/><text class="sn" x="290" y="128">IDLE</text>
+  <rect class="st" x="362" y="104" width="92" height="40" rx="5"/><text class="sn" x="408" y="128">MOVING</text>
+  <rect class="st" x="480" y="104" width="92" height="40" rx="5"/><text class="sn" x="526" y="128">ARRIVED</text>
+  <rect class="st" x="598" y="104" width="92" height="40" rx="5"/><text class="sn" x="644" y="128">HOLD</text>
+  <rect x="8" y="196" width="92" height="38" rx="5" fill="#f4f6f7" stroke="#8a939d" stroke-width="1.2"/>
+  <text x="54" y="220" font-size="10.5px" font-weight="700" fill="#5d6874" text-anchor="middle">FAULT</text>
+  <rect x="396" y="196" width="196" height="38" rx="5" fill="#f9ece9" stroke="#8e3229" stroke-width="1.7"/>
+  <text x="494" y="220" font-size="11px" font-weight="700" fill="#8e3229" text-anchor="middle">ESTOP</text>
+ </g>
+ <!-- forward transitions -->
+ <g stroke="#0f5666" stroke-width="1.4" fill="none">
+  <path d="M100 124 H122" marker-end="url(#sa)"/>
+  <path d="M218 124 H240" marker-end="url(#sa)"/>
+  <path d="M336 124 H358" marker-end="url(#sa)"/>
+  <path d="M454 124 H476" marker-end="url(#sa)"/>
+  <path d="M572 124 H594" marker-end="url(#sa)"/>
+ </g>
+ <g class="lb">
+  <text x="111" y="97">self-test ok</text>
+  <text x="229" y="90">EKF</text><text x="229" y="99">converged</text>
+  <text x="347" y="97">setpoint</text>
+  <text x="465" y="90">settled</text><text x="465" y="99">1 s</text>
+  <text x="583" y="90">layout</text><text x="583" y="99">confirmed</text>
+ </g>
+ <!-- fault and estop transitions -->
+ <path d="M54 146 V192" stroke="#8a939d" stroke-width="1.3" fill="none" stroke-dasharray="5 3" marker-end="url(#sg)"/>
+ <text class="lb" x="62" y="172" text-anchor="start">self-test failed</text>
+ <g stroke="#8e3229" stroke-width="1.4" fill="none" stroke-dasharray="5 3">
+  <path d="M408 146 C 408 172, 428 176, 446 192" marker-end="url(#sr)"/>
+  <path d="M644 146 C 644 176, 600 180, 578 192" marker-end="url(#sr)"/>
+ </g>
+ <path d="M394 213 C 330 213, 290 182, 290 148" stroke="#8e3229" stroke-width="1.4" fill="none" marker-end="url(#sr)"/>
+ <g class="lb" fill="#8e3229">
+  <text x="398" y="170" text-anchor="end">watchdog</text>
+  <text x="698" y="174" text-anchor="end">tilt &#183; e-stop</text>
+  <text x="336" y="232">operator reset</text>
+ </g>
+</svg>
+<figcaption><b>Figure 5.</b> Cone state machine. Every transition into ESTOP cuts motor
+drive <b>in hardware</b>, not only in software. The watchdog transition is how NFR-9 is met
+without the coordinator having to be reachable: no valid command for 500 ms → ESTOP.</figcaption>
+</figure>
+
+<h3><span class="n">12.3</span>Control cascade on the cone</h3>
+<p>Three nested loops, each at its own rate.</p>
+<table class="compact">
+<thead><tr><th style="width:26%">Loop</th><th style="width:11%">Rate</th><th style="width:29%">Input</th><th>Output</th></tr></thead>
+<tbody>
+<tr><td>Wheel velocity PID (× 2)</td><td><b>200 Hz</b></td><td>Encoder counts, via the ESP32 PCNT hardware counters</td><td>PWM duty</td></tr>
+<tr><td>Unicycle pose controller</td><td><b>50 Hz</b></td><td>EKF pose and target pose</td><td><i>v</i>, <i>ω</i></td></tr>
+<tr><td>Command and avoidance</td><td><b>10 Hz</b></td><td>ESP-NOW setpoint</td><td>Target pose or velocity</td></tr>
+</tbody></table>
+<div class="note warn">
+<span class="lbl">Two implementation notes that will otherwise cost a week each</span>
+<p><b>Use the PCNT peripheral for quadrature decoding, not pin interrupts.</b> At 1.0 m/s
+with a 12 CPR encoder behind a 30:1 gearbox, each wheel generates roughly 4 kHz of edges.
+Interrupt-driven counting will steal cycles from the 200 Hz control loop and the symptom
+will look like a tuning problem rather than a resourcing one.</p>
+<p><b>Asphalt needs friction compensation.</b> Add a static feed-forward term to the PID
+output so the wheel begins turning at low commands instead of stalling inside the deadband.
+Without it, terminal approach at 0.3 m/s (§11.4) will stick short of the target and NFR-1
+will fail for reasons that have nothing to do with localisation.</p>
+</div>
+
+<h2><span class="tocmk">QQ016QQ</span><span class="n">13</span>Recommended technology stack</h2>
+<p>No stack preference was expressed, so this is a recommendation with its reasoning
+attached. Any part of it may be substituted — nothing in §11 or §12 depends on the choice
+of language.</p>
+<table class="compact">
+<thead><tr><th style="width:17%">Layer</th><th style="width:30%">Choice</th><th>Reasoning</th></tr></thead>
+<tbody>
+<tr><td><b>Coordinator</b></td><td>Python 3.11+ — numpy, <code>scipy.optimize</code>, asyncio, websockets</td><td>Assignment is a library call and ORCA is a couple of hundred lines. Plotting for the report comes free, and iteration speed matters more here than runtime speed at 10 Hz</td></tr>
+<tr><td><b>Cone firmware</b></td><td>C++ on ESP32-S3, Arduino core or ESP-IDF</td><td>Dual core lets the radio and the control loop stop competing; hardware PCNT and MCPWM peripherals are exactly what §12.3 needs; mature driver support for DW3000 and common IMUs</td></tr>
+<tr><td><b>Tablet application</b></td><td>Web app — HTML Canvas, served by the coordinator</td><td>Runs on any tablet with a browser. No app store, no Android/iOS split, no installation: the instructor joins a hotspot and opens a URL. This is also what makes NFR-13 achievable</td></tr>
+<tr><td><b>Simulator</b></td><td>Python, sharing the coordinator's planner code verbatim</td><td>See §14.1 — "verbatim" is the entire point</td></tr>
+</tbody></table>
+<div class="note">
+<span class="lbl">On ROS 2</span>
+<p>ROS 2 is the more academically impressive answer and it supplies Nav2, tf2, rviz and
+Gazebo at no cost. It is <b>not</b> recommended here, for two reasons. Its learning curve
+would consume a large fraction of a two-semester budget for a team that has not used it;
+and almost none of the heavy machinery it provides — SLAM, costmaps, sensor pipelines — is
+needed on a flat, empty, fully instrumented pad.</p>
+<p><b>This decision flips entirely on one fact:</b> if any student already knows ROS 2
+well, revisit it immediately. The argument above is about the cost of learning it, not
+about its merits.</p>
+</div>
+
+<h2><span class="tocmk">QQ017QQ</span><span class="n">14</span>Development strategy</h2>
+
+<h3><span class="n">14.1</span>Build the simulator first</h3>
+<p><b>This is the most important process recommendation in this document.</b></p>
+<p>Write the coordinator against a <i>cone interface</i>, then provide two implementations
+of it: the serial gateway, and a simulator that integrates differential-drive kinematics
+with injected noise — UWB jitter, wheel slip, packet loss, latency. The planner cannot
+tell them apart.</p>
+<table class="compact">
+<thead><tr><th style="width:34%">What it buys</th><th>Why it matters here</th></tr></thead>
+<tbody>
+<tr><td><b>Three of four roles never wait on the machine shop</b></td><td>The single most common way a four-person hardware capstone loses a month</td></tr>
+<tr><td><b>Algorithms are debugged at twelve cones on a laptop</b></td><td>Then demonstrated on six real ones — and NFR-14 is satisfied as a by-product</td></tr>
+<tr><td><b>Failures become repeatable tests</b></td><td>30% packet loss, a cone that stops answering, an anchor going down: all reproducible on demand, none of them reproducible on hardware</td></tr>
+<tr><td><b>A demonstrable deliverable in its own right</b></td><td>If hardware slips, the simulator still shows the coordination working — the project degrades instead of failing</td></tr>
+</tbody></table>
+
+<h3><span class="n">14.2</span>Build the measurement instrument early</h3>
+<p>The overhead-camera ground-truth rig (§11.2) and the F8.2 accuracy log are
+<i>prerequisites</i> for the evidence in §8, not by-products of it. Both should exist by
+week 8 of the first semester. From that point, every test run generates report material
+automatically and at no marginal cost.</p>
+
+<h3><span class="n">14.3</span>Integrate in this order, and not out of it</h3>
+<p><b>One cone → two cones → six cones.</b> Two cones is where collision avoidance first
+becomes real, and it is a far larger step than two to six. <b>Order parts for six, but
+build and prove two.</b></p>
+
+<!-- ============ PART III ============ -->
+<h1 class="part"><span class="tocmk">QQ018QQ</span>Part III — Execution<span class="pt">Part III</span></h1>
+
+<h2><span class="tocmk">QQ019QQ</span><span class="n">15</span>Team split</h2>
+<p>Four students, four vertical slices. Each student owns a slice end to end — design,
+build, test, and the corresponding report chapter — so that no student's mark depends on
+another student's subsystem working.</p>
+<table>
+<thead><tr><th style="width:16%">Role</th><th style="width:10%">Student</th><th style="width:38%">Owns</th><th>Features</th></tr></thead>
+<tbody>
+<tr><td><b>Mechanical</b></td><td>MECH</td><td>Chassis and drivetrain geometry, wheel and motor selection, cone shell and impact strategy, centre-of-mass and tip-over analysis, weatherproofing, CAD and manufacture, battery access</td><td class="fid">NFR-11, NFR-12, NFR-15, F5.4 (mechanical)</td></tr>
+<tr><td><b>Embedded &amp; Power</b></td><td>MECA-1</td><td>Electronics integration and wiring or PCB, power system and BMS, motor drivers, firmware base, encoder and IMU drivers, wheel PID, self-test, firmware safety interlocks</td><td class="fid">F6.2, F6.3, F6.5, F6.6, F6.7, F5.2, F5.4, F5.5, F5.7, F5.8, NFR-8</td></tr>
+<tr><td><b>Localisation &amp; Comms</b></td><td>MECA-2</td><td>Anchor infrastructure and survey, UWB ranging, EKF pose fusion, ESP-NOW protocol and gateway, calibration routines, the ground-truth camera rig</td><td class="fid">F6.1, F7.1, F7.3, F5.3, NFR-1, NFR-2, NFR-6</td></tr>
+<tr><td><b>Coordination &amp; UI</b></td><td>MECA-3</td><td>Coordinator service, simulator, layout compiler, assignment, ORCA planner, tablet application, logging</td><td class="fid">F1.*, F2.*, F3.*, F4.*, F8.*, F5.1, F5.6, NFR-3, NFR-13, NFR-14</td></tr>
+</tbody></table>
+<p><b>Shared, and scheduled explicitly rather than assumed:</b> system integration, the
+test campaign of §8, the report, the presentation and the video.</p>
+<div class="note warn">
+<span class="lbl">Freeze these two interfaces by week 6</span>
+<p>These are where the four slices meet, and they are where integration projects usually
+fail:</p>
+<p><b>1. The cone command and telemetry message set</b> — between MECA-1 and MECA-2/3.<br>
+<b>2. The coordinator ↔ cone abstraction</b> (§14.1) — so MECA-3 can develop against the
+simulator while hardware is still on the bench.</p>
+<p>After week 6, treat changes to either as change requests with all four students present,
+not as edits one person makes.</p>
+</div>
+
+<h2 class="newpage"><span class="tocmk">QQ020QQ</span><span class="n">16</span>Timeline</h2>
+<p>Two semesters of roughly fifteen weeks. Milestones are stated as demonstrable outcomes,
+never as activities: "one cone drives to a commanded point" is a milestone, "work on
+localisation" is not.</p>
+
+<figure>
+<svg viewBox="0 0 700 336" xmlns="http://www.w3.org/2000/svg" font-family="Liberation Sans, Arial, sans-serif">
+ <defs><style>.rl{font-size:9px;fill:#3a444e}.wk{font-size:7.4px;fill:#8a939d}
+   .bar{rx:3}.bt{font-size:8px;fill:#ffffff;font-weight:700}</style></defs>
+ <!-- header -->
+ <rect x="150" y="2" width="270" height="19" rx="3" fill="#0f5666"/>
+ <rect x="420" y="2" width="270" height="19" rx="3" fill="#14707f"/>
+ <text x="285" y="15.5" font-size="9.5px" fill="#ffffff" font-weight="700" text-anchor="middle">Semester 1 — Fall 2026</text>
+ <text x="555" y="15.5" font-size="9.5px" fill="#ffffff" font-weight="700" text-anchor="middle">Semester 2 — Spring 2027</text>
+ <g class="wk" text-anchor="middle">
+  <text x="159" y="32">1</text><text x="195" y="32">3</text><text x="231" y="32">5</text><text x="267" y="32">7</text><text x="303" y="32">9</text><text x="339" y="32">11</text><text x="375" y="32">13</text><text x="411" y="32">15</text>
+  <text x="429" y="32">1</text><text x="465" y="32">3</text><text x="501" y="32">5</text><text x="537" y="32">7</text><text x="573" y="32">9</text><text x="609" y="32">11</text><text x="645" y="32">13</text><text x="681" y="32">15</text>
+ </g>
+ <g stroke="#eef1f3" stroke-width="1">
+  <path d="M186 36V318M222 36V318M258 36V318M294 36V318M330 36V318M366 36V318M402 36V318M456 36V318M492 36V318M528 36V318M564 36V318M600 36V318M636 36V318M672 36V318"/>
+ </g>
+ <path d="M420 24V322" stroke="#c3cbd2" stroke-width="1.4" stroke-dasharray="5 4"/>
+
+ <g class="rl">
+  <text x="0" y="50">Specification &amp; interfaces</text>
+  <rect class="bar" x="150" y="40" width="72" height="15" fill="#0f5666"/>
+  <text x="0" y="71">Simulator running</text>
+  <rect class="bar" x="186" y="61" width="72" height="15" fill="#2c6349"/>
+  <text x="0" y="92">Cone unit v1</text>
+  <rect class="bar" x="204" y="82" width="90" height="15" fill="#14707f"/>
+  <text x="0" y="113">Localisation bench</text>
+  <rect class="bar" x="240" y="103" width="90" height="15" fill="#8f5a0d"/>
+  <text x="0" y="134" font-weight="700" fill="#0f5666">Single cone autonomous</text>
+  <rect class="bar" x="294" y="124" width="72" height="15" fill="#0f5666"/>
+  <text x="0" y="155">Tablet application v1</text>
+  <rect class="bar" x="348" y="145" width="54" height="15" fill="#14707f"/>
+  <text x="0" y="176">Fleet of four built</text>
+  <rect class="bar" x="420" y="166" width="54" height="15" fill="#14707f"/>
+  <text x="0" y="197" font-weight="700" fill="#0f5666">Two cones avoid each other</text>
+  <rect class="bar" x="438" y="187" width="72" height="15" fill="#0f5666"/>
+  <text x="0" y="218">Full fleet coordination</text>
+  <rect class="bar" x="474" y="208" width="72" height="15" fill="#14707f"/>
+  <text x="0" y="239">Safety features complete</text>
+  <rect class="bar" x="510" y="229" width="72" height="15" fill="#8e3229"/>
+  <text x="0" y="260">Robustness &amp; recovery</text>
+  <rect class="bar" x="546" y="250" width="72" height="15" fill="#14707f"/>
+  <text x="0" y="281">Test campaign</text>
+  <rect class="bar" x="582" y="271" width="54" height="15" fill="#2c6349"/>
+  <text x="0" y="302">Report · video · deliverables</text>
+  <rect class="bar" x="618" y="292" width="54" height="15" fill="#8a939d"/>
+ </g>
+ <!-- go/no-go and reviews -->
+ <path d="M366 120 V318" stroke="#8e3229" stroke-width="1.3" stroke-dasharray="4 3"/>
+ <text x="362" y="330" font-size="8px" fill="#8e3229" font-weight="700" text-anchor="end">go / no-go</text>
+ <g><path d="M411 36 l7 8 l-7 8 l-7 -8 z" fill="#0f5666"/><text x="404" y="330" font-size="8px" fill="#0f5666" font-weight="700" text-anchor="middle">review</text></g>
+ <g><path d="M681 36 l7 8 l-7 8 l-7 -8 z" fill="#8e3229"/><text x="681" y="330" font-size="8px" fill="#8e3229" font-weight="700" text-anchor="middle">defence</text></g>
+</svg>
+<figcaption><b>Figure 6.</b> Two-semester schedule. Note the overlap in the first eight
+weeks: the simulator, the cone unit and the localisation bench proceed in parallel because
+none of them blocks another — that parallelism is what §14.1 exists to create.</figcaption>
+</figure>
+
+<h3><span class="n">16.1</span>Semester 1 — Fall 2026: prove the concept</h3>
+<table class="compact">
+<thead><tr><th style="width:10%">Weeks</th><th style="width:29%">Milestone</th><th>Done when</th></tr></thead>
+<tbody>
+<tr><td>1–2</td><td><b>Specification frozen</b></td><td>All five questions in §10 answered by the advisor; fleet size, pad and heading requirement fixed</td></tr>
+<tr><td>3–4</td><td><b>Interfaces frozen</b></td><td>The two interfaces in §15 documented and agreed by all four students</td></tr>
+<tr><td>3–6</td><td><b>Simulator running</b></td><td>Six simulated cones move from a drawn path to targets, with assignment, ORCA, injected noise and packet loss. MECA-3 is now permanently unblocked</td></tr>
+<tr><td>4–8</td><td>Cone unit v1</td><td>One chassis drives under manual command; encoders and PID closed; shell CAD released</td></tr>
+<tr><td>6–10</td><td>Localisation bench</td><td>UWB ranging to four anchors, raw accuracy characterised, EKF fusing odometry and IMU</td></tr>
+<tr><td>9–12</td><td><b>One cone drives to a commanded point autonomously</b></td><td>Position error measured against the camera rig. <b>The semester's critical result</b></td></tr>
+<tr><td>12–14</td><td>Tablet application v1</td><td>Draw, validate, preview and execute — against the simulator</td></tr>
+<tr><td>15</td><td><b>Semester review</b></td><td>Live demonstration: one real cone driving to tablet-specified points, plus six in simulation</td></tr>
+</tbody></table>
+<div class="note safety">
+<span class="lbl">Go / no-go — weeks 9–12</span>
+<p>This is the project's decision point. If a single cone cannot reach a commanded position
+within tolerance, the swarm work has nothing to stand on. <b>Escalate to the advisor
+immediately rather than proceeding to build more units</b> — the failure modes are cheap to
+fix at one unit and expensive at six. The most likely causes, in order, are localisation
+accuracy (§11.2), friction deadband (§12.3) and wheel slip (RSK-2).</p>
+</div>
+
+<h3><span class="n">16.2</span>Semester 2 — Spring 2027: make it a system</h3>
+<table class="compact">
+<thead><tr><th style="width:10%">Weeks</th><th style="width:29%">Milestone</th><th>Done when</th></tr></thead>
+<tbody>
+<tr><td>1–3</td><td>Fleet of four built</td><td>Four units assembled from the v1 design, with shells fitted</td></tr>
+<tr><td>2–5</td><td><b>Two cones avoid each other</b></td><td>Head-on and crossing conflicts resolved, on hardware. <b>The first genuine swarm result</b></td></tr>
+<tr><td>4–7</td><td>Full fleet coordination</td><td>Four cones deploy a preset layout; NFR-3 and NFR-7 measured</td></tr>
+<tr><td>6–9</td><td>Safety features complete</td><td>F5.1 – F5.8 implemented and deliberately provoked; NFR-9 measured</td></tr>
+<tr><td>8–11</td><td>Robustness</td><td>Tip detection and re-deploy (F3.8), battery management (F6.7), knock-over recovery per UC-3</td></tr>
+<tr><td>10–12</td><td><b>Test campaign</b></td><td>The §8 verification matrix executed and the evidence collected</td></tr>
+<tr><td>12–14</td><td>Deliverables</td><td>Report, presentation, subtitled video, source code, schematics, CAD</td></tr>
+<tr><td>15</td><td><b>Defence</b></td><td>The four-minute sequence of §7.2, rehearsed</td></tr>
+</tbody></table>
+
+<h2><span class="tocmk">QQ021QQ</span><span class="n">17</span>Sequencing rules</h2>
+<p>Three rules that matter more than any of the dates above.</p>
+<table class="compact">
+<thead><tr><th style="width:5%">#</th><th style="width:28%">Rule</th><th>Rationale</th></tr></thead>
+<tbody>
+<tr><td><b>1</b></td><td><b>Simulator before hardware</b></td><td>Three of the four slices can progress without a physical cone. Any week in which MECA-3 is blocked on the machine shop is a planning failure, not a manufacturing one</td></tr>
+<tr><td><b>2</b></td><td><b>One, then two, then six</b></td><td>Two cones is where collision avoidance becomes real, and it is a much larger step than two to six. Do not build four units before two work</td></tr>
+<tr><td><b>3</b></td><td><b>Build the measurement rig before you need the measurements</b></td><td>Ground truth and the F8.2 log should exist by week 8 of Semester 1. Every test run afterwards then generates report evidence for free (§14.2)</td></tr>
+</tbody></table>
+
+<h2><span class="tocmk">QQ022QQ</span><span class="n">18</span>Risk register</h2>
+<table class="ids">
+<thead><tr><th style="width:8%">ID</th><th style="width:22%">Risk</th><th style="width:9%">Impact</th><th style="width:10%">Likelihood</th><th>Mitigation</th></tr></thead>
+<tbody>
+<tr><td>RSK-1</td><td>Outdoor UWB accuracy worse than 25 cm</td><td><b>High</b><br><small>NFR-1 fails</small></td><td>Medium</td><td>Characterise by week 10 of Semester 1, not later. Raise anchors on poles, improve anchor geometry, fuse harder. Fall back to an indoor demonstration with the camera — which §10 question 3 exists to decide <i>early</i> rather than under pressure</td></tr>
+<tr><td>RSK-2</td><td>Wheel slip and traction on asphalt</td><td>Medium</td><td>Medium</td><td>Wheels ≥ 100 mm with rubber tread, torque margin ≥ 3×, closed-loop control, and UWB continuously correcting odometry drift</td></tr>
+<tr><td>RSK-3</td><td>Budget will not cover six units</td><td>Medium</td><td>Medium</td><td>Design for six, build two, prove, then replicate. §7.2 needs only four</td></tr>
+<tr><td>RSK-4</td><td>Integration compressed into the final weeks</td><td><b>High</b></td><td><b>High</b><br><small>the classic capstone failure</small></td><td>The frozen interfaces of §15 and the simulator of §14.1 exist specifically to make integration continuous instead of terminal</td></tr>
+<tr><td>RSK-5</td><td>Mechanical durability under vehicle contact</td><td>Medium</td><td>Medium</td><td>Resolve §10 question 5 early. Compliant sacrificial shell, mechanically isolated electronics, low centre of mass</td></tr>
+<tr><td>RSK-6</td><td>One student's slice slips and blocks the others</td><td><b>High</b></td><td>Medium</td><td>Vertical slices plus the simulator mean each slice degrades independently rather than blocking the remainder</td></tr>
+<tr><td>RSK-7</td><td>Scope creep from the swarm literature</td><td>Medium</td><td><b>High</b></td><td>§9 is the defence. Anything outside the Must set of §7.1 waits, however interesting it is</td></tr>
+</tbody></table>
+
+<h2><span class="tocmk">QQ023QQ</span><span class="n">19</span>What to do first</h2>
+<p>In order, starting now:</p>
+<ol>
+<li><b>Take §10 to the advisor and close all five questions.</b> Questions 3 and 4 first — together they can remove most of the project's technical risk at no cost to its academic value.</li>
+<li><b>Fix the fleet size and the pad assumption</b>, and update §3 accordingly.</li>
+<li><b>Agree the two interfaces in §15 and write them down.</b></li>
+<li><b>Start the simulator.</b> It is the longest pole with no dependencies, and everything in §14.1 follows from having it early.</li>
+</ol>
+
+<h1 class="part"><span class="tocmk">QQ024QQ</span>Appendices<span class="pt">Reference</span></h1>
+<h2><span class="tocmk">QQ025QQ</span><span class="n">A</span>Feature index</h2>
+<p>All 53 features in one table, with the MoSCoW priority from §7.1 and the owning role from §15. This is the checklist against which progress is tracked.</p>
+<table class="compact ids"><thead><tr><th style="width:9%">ID</th><th style="width:29%">Feature</th><th style="width:22%">Area</th><th style="width:16%">Priority</th><th>Owner</th></tr></thead><tbody>
+<tr><td>F1.1</td><td>Freehand path</td><td>Course authoring</td><td><span class="pill must">Must</span></td><td>MECA-3</td></tr>
+<tr><td>F1.2</td><td>Point placement</td><td>Course authoring</td><td><span class="pill should">Should</span></td><td>MECA-3</td></tr>
+<tr><td>F1.3</td><td>Geometric primitives</td><td>Course authoring</td><td><span class="pill should">Should</span></td><td>MECA-3</td></tr>
+<tr><td>F1.4</td><td>Path editing</td><td>Course authoring</td><td><span class="pill should">Should</span></td><td>MECA-3</td></tr>
+<tr><td>F1.5</td><td>Automatic spacing</td><td>Course authoring</td><td><span class="pill must">Must</span></td><td>MECA-3</td></tr>
+<tr><td>F1.6</td><td>Numeric dimensioning</td><td>Course authoring</td><td><span class="pill should">Should</span></td><td>MECA-3</td></tr>
+<tr><td>F1.7</td><td>Feasibility check</td><td>Course authoring</td><td><span class="pill must">Must</span></td><td>MECA-3</td></tr>
+<tr><td>F1.8</td><td>Layout transform</td><td>Course authoring</td><td><span class="pill should">Should</span></td><td>MECA-3</td></tr>
+<tr><td>F1.9</td><td>Reference overlay</td><td>Course authoring</td><td><span class="pill could">Could</span></td><td>MECA-3</td></tr>
+<tr><td>F2.1</td><td>Save layout</td><td>Layout library</td><td><span class="pill must">Must</span></td><td>MECA-3</td></tr>
+<tr><td>F2.2</td><td>Load layout</td><td>Layout library</td><td><span class="pill must">Must</span></td><td>MECA-3</td></tr>
+<tr><td>F2.3</td><td>Standard presets</td><td>Layout library</td><td><span class="pill must">Must</span></td><td>MECA-3</td></tr>
+<tr><td>F2.4</td><td>Manage layouts</td><td>Layout library</td><td><span class="pill should">Should</span></td><td>MECA-3</td></tr>
+<tr><td>F2.5</td><td>Import / export</td><td>Layout library</td><td><span class="pill could">Could</span></td><td>MECA-3</td></tr>
+<tr><td>F2.6</td><td>Lesson sequence</td><td>Layout library</td><td><span class="pill could">Could</span></td><td>MECA-3</td></tr>
+<tr><td>F3.1</td><td>Preview with ETA</td><td>Deployment</td><td><span class="pill must">Must</span></td><td>MECA-3</td></tr>
+<tr><td>F3.2</td><td>Execute</td><td>Deployment</td><td><span class="pill must">Must</span></td><td>MECA-3</td></tr>
+<tr><td>F3.3</td><td>Live progress</td><td>Deployment</td><td><span class="pill must">Must</span></td><td>MECA-3</td></tr>
+<tr><td>F3.4</td><td>Pause / resume</td><td>Deployment</td><td><span class="pill should">Should</span></td><td>MECA-3</td></tr>
+<tr><td>F3.5</td><td>Abort</td><td>Deployment</td><td><span class="pill should">Should</span></td><td>MECA-3</td></tr>
+<tr><td>F3.6</td><td>READY signal</td><td>Deployment</td><td><span class="pill must">Must</span></td><td>MECA-3</td></tr>
+<tr><td>F3.7</td><td>Gather</td><td>Deployment</td><td><span class="pill should">Should</span></td><td>MECA-3</td></tr>
+<tr><td>F3.8</td><td>Re-deploy displaced</td><td>Deployment</td><td><span class="pill should">Should</span></td><td>MECA-3</td></tr>
+<tr><td>F4.1</td><td>Live map</td><td>Monitoring</td><td><span class="pill must">Must</span></td><td>MECA-3</td></tr>
+<tr><td>F4.2</td><td>Per-cone status</td><td>Monitoring</td><td><span class="pill must">Must</span></td><td>MECA-3</td></tr>
+<tr><td>F4.3</td><td>Fleet summary</td><td>Monitoring</td><td><span class="pill should">Should</span></td><td>MECA-3</td></tr>
+<tr><td>F4.4</td><td>Alerts</td><td>Monitoring</td><td><span class="pill should">Should</span></td><td>MECA-3</td></tr>
+<tr><td>F4.5</td><td>Event log</td><td>Monitoring</td><td><span class="pill should">Should</span></td><td>MECA-3</td></tr>
+<tr><td>F5.1</td><td>Emergency stop</td><td>Safety</td><td><span class="pill must">Must</span></td><td>MECA-3</td></tr>
+<tr><td>F5.2</td><td>Comms watchdog</td><td>Safety</td><td><span class="pill must">Must</span></td><td>MECA-1</td></tr>
+<tr><td>F5.3</td><td>Geofence</td><td>Safety</td><td><span class="pill must">Must</span></td><td>MECA-2</td></tr>
+<tr><td>F5.4</td><td>Tip-over detection</td><td>Safety</td><td><span class="pill must">Must</span></td><td>MECA-1 · MECH</td></tr>
+<tr><td>F5.5</td><td>Obstacle reflex</td><td>Safety</td><td><span class="pill should">Should</span></td><td>MECA-1</td></tr>
+<tr><td>F5.6</td><td>Vehicle interlock</td><td>Safety</td><td><span class="pill should">Should</span></td><td>MECA-3</td></tr>
+<tr><td>F5.7</td><td>Speed limiting</td><td>Safety</td><td><span class="pill must">Must</span></td><td>MECA-1</td></tr>
+<tr><td>F5.8</td><td>Movement conspicuity</td><td>Safety</td><td><span class="pill should">Should</span></td><td>MECA-1</td></tr>
+<tr><td>F6.1</td><td>Self-localisation</td><td>Cone autonomy</td><td><span class="pill must">Must</span></td><td>MECA-2</td></tr>
+<tr><td>F6.2</td><td>Drive to pose</td><td>Cone autonomy</td><td><span class="pill must">Must</span></td><td>MECA-1</td></tr>
+<tr><td>F6.3</td><td>Hold position</td><td>Cone autonomy</td><td><span class="pill must">Must</span></td><td>MECA-1</td></tr>
+<tr><td>F6.4</td><td>Mutual avoidance</td><td>Cone autonomy</td><td><span class="pill must">Must</span></td><td>MECA-3</td></tr>
+<tr><td>F6.5</td><td>Telemetry</td><td>Cone autonomy</td><td><span class="pill must">Must</span></td><td>MECA-1</td></tr>
+<tr><td>F6.6</td><td>Power-on self-test</td><td>Cone autonomy</td><td><span class="pill must">Must</span></td><td>MECA-1</td></tr>
+<tr><td>F6.7</td><td>Battery management</td><td>Cone autonomy</td><td><span class="pill should">Should</span></td><td>MECA-1</td></tr>
+<tr><td>F6.8</td><td>Identify</td><td>Cone autonomy</td><td><span class="pill should">Should</span></td><td>MECA-1</td></tr>
+<tr><td>F7.1</td><td>Pad definition</td><td>Administration</td><td><span class="pill must">Must</span></td><td>MECA-2</td></tr>
+<tr><td>F7.2</td><td>Fleet registration</td><td>Administration</td><td><span class="pill must">Must</span></td><td>MECA-3</td></tr>
+<tr><td>F7.3</td><td>Calibration</td><td>Administration</td><td><span class="pill must">Must</span></td><td>MECA-2</td></tr>
+<tr><td>F7.4</td><td>Firmware update</td><td>Administration</td><td><span class="pill could">Could</span></td><td>MECA-1</td></tr>
+<tr><td>F7.5</td><td>Diagnostics</td><td>Administration</td><td><span class="pill should">Should</span></td><td>MECA-1</td></tr>
+<tr><td>F7.6</td><td>Defaults</td><td>Administration</td><td><span class="pill could">Could</span></td><td>MECA-3</td></tr>
+<tr><td>F8.1</td><td>Session record</td><td>Data</td><td><span class="pill should">Should</span></td><td>MECA-3</td></tr>
+<tr><td>F8.2</td><td>Accuracy record</td><td>Data</td><td><span class="pill should">Should</span></td><td>MECA-3</td></tr>
+<tr><td>F8.3</td><td>Export</td><td>Data</td><td><span class="pill could">Could</span></td><td>MECA-3</td></tr>
+</tbody></table>
+<p><b>Totals:</b> 53 features — <span class="pill must">Must</span> 26 &nbsp; <span class="pill should">Should</span> 21 &nbsp; <span class="pill could">Could</span> 6. Every feature in the Safety area is mandatory regardless of the priority shown; see §2.5.</p>
+
+<h2><span class="tocmk">QQ026QQ</span><span class="n">B</span>Derived parameters and design values</h2>
+<p>Every number the design depends on, in one place, with the section that derives it.
+When one of these changes, check the source section for what else moves with it.</p>
+<table class="compact">
+<thead><tr><th style="width:38%">Parameter</th><th style="width:22%">Value</th><th>Source</th></tr></thead>
+<tbody>
+<tr><td colspan="3" style="background:#eaf2f4;font-weight:700;color:#0f5666;font-size:8pt;letter-spacing:.08em">MOTION</td></tr>
+<tr><td>Maximum coordinated speed, <i>v</i><sub>max</sub></td><td><b>0.80 m/s</b></td><td>§11.4, F5.7</td></tr>
+<tr><td>Terminal approach speed, within 1 m of goal</td><td><b>0.30 m/s</b></td><td>§11.4</td></tr>
+<tr><td>Cone physical radius, <i>r</i><sub>cone</sub></td><td>0.20 m</td><td>§11.4</td></tr>
+<tr><td>ORCA safety radius, <i>r</i><sub>safety</sub></td><td><b>0.60 m</b></td><td>§11.4 — derived, not assumed</td></tr>
+<tr><td>Worst-case control staleness</td><td>190 ms</td><td>§11.4</td></tr>
+<tr><td>Settling dwell before ARRIVED</td><td>1 s</td><td>§12.2</td></tr>
+<tr><td colspan="3" style="background:#eaf2f4;font-weight:700;color:#0f5666;font-size:8pt;letter-spacing:.08em">RATES</td></tr>
+<tr><td>Coordinator planning cycle</td><td>10 Hz — 100 ms</td><td>§12.1</td></tr>
+<tr><td>Telemetry reporting rate</td><td>10 Hz</td><td>F6.5</td></tr>
+<tr><td>Pose controller loop</td><td>50 Hz</td><td>§12.3</td></tr>
+<tr><td>Wheel velocity PID loop</td><td>200 Hz</td><td>§12.3</td></tr>
+<tr><td>UWB fix rate — 6 cones / 10 cones</td><td>≈ 13 Hz / ≈ 8 Hz</td><td>§11.2</td></tr>
+<tr><td>Live map refresh</td><td>≥ 5 Hz</td><td>NFR-5</td></tr>
+<tr><td colspan="3" style="background:#f9ece9;font-weight:700;color:#8e3229;font-size:8pt;letter-spacing:.08em">SAFETY</td></tr>
+<tr><td>Communications watchdog timeout</td><td><b>500 ms</b></td><td>F5.2, NFR-9</td></tr>
+<tr><td>Obstacle reflex brake threshold</td><td>0.40 m</td><td>F5.5</td></tr>
+<tr><td>Tip detection latency</td><td>&lt; 1 s</td><td>F5.4</td></tr>
+<tr><td>E-STOP to fleet halt</td><td><b>≤ 500 ms</b></td><td>NFR-9</td></tr>
+<tr><td colspan="3" style="background:#eaf2f4;font-weight:700;color:#0f5666;font-size:8pt;letter-spacing:.08em">ACCURACY AND TOLERANCE</td></tr>
+<tr><td>Position error, RMS / 95th percentile</td><td><b>0.15 m</b> / 0.25 m</td><td>NFR-1</td></tr>
+<tr><td>Heading error</td><td>10°</td><td>NFR-2</td></tr>
+<tr><td>Reconfiguration budget, 6 cones over 20 × 20 m</td><td><b>60 s</b></td><td>NFR-3</td></tr>
+<tr><td>Command to first movement</td><td>≤ 500 ms</td><td>NFR-4</td></tr>
+<tr><td>Command link packet loss at 50 m</td><td>&lt; 2%</td><td>NFR-6</td></tr>
+<tr><td colspan="3" style="background:#eaf2f4;font-weight:700;color:#0f5666;font-size:8pt;letter-spacing:.08em">LAYOUT AND FLEET</td></tr>
+<tr><td>Default cone spacing along a path</td><td>2.0 m</td><td>F1.5</td></tr>
+<tr><td>Spacing adjustment range</td><td>0.5 – 20 m</td><td>F1.5</td></tr>
+<tr><td>Prototype fleet baseline</td><td><b>6 cones</b></td><td>§3 — open question 1</td></tr>
+<tr><td>Fleet verified in simulation</td><td>12 cones</td><td>NFR-14</td></tr>
+<tr><td>Minimum demonstrable product fleet</td><td>4 cones</td><td>§7.2</td></tr>
+<tr><td colspan="3" style="background:#fbf2e2;font-weight:700;color:#8f5a0d;font-size:8pt;letter-spacing:.08em">INFRASTRUCTURE AND ENVIRONMENT</td></tr>
+<tr><td>UWB anchor count</td><td>4</td><td>§11.2</td></tr>
+<tr><td>UWB anchor mounting height</td><td>3 – 4 m</td><td>§11.2 — multipath mitigation</td></tr>
+<tr><td>Assumed pad dimensions</td><td>30 × 50 m</td><td>§1.5 — open question 2</td></tr>
+<tr><td>Maximum gradient</td><td>5%</td><td>§1.5</td></tr>
+<tr><td>Operating temperature</td><td>0 – 45 °C</td><td>NFR-10</td></tr>
+<tr><td>Ingress protection</td><td>IP54 minimum</td><td>NFR-12</td></tr>
+<tr><td colspan="3" style="background:#eaf2f4;font-weight:700;color:#0f5666;font-size:8pt;letter-spacing:.08em">POWER AND INTERFACE</td></tr>
+<tr><td>Battery warning / lockout thresholds</td><td>20% / 10%</td><td>F6.7</td></tr>
+<tr><td>Endurance per charge</td><td>≥ 2 h</td><td>NFR-8</td></tr>
+<tr><td>Battery replacement time</td><td>&lt; 5 min, hand tools</td><td>NFR-15</td></tr>
+<tr><td>Minimum touch target</td><td>48 px</td><td>§5.1</td></tr>
+</tbody></table>
+
+<h2><span class="tocmk">QQ027QQ</span><span class="n">C</span>Glossary</h2>
+<table class="compact">
+<thead><tr><th style="width:20%">Term</th><th>Meaning in this document</th></tr></thead>
+<tbody>
+<tr><td><b>ArUco</b></td><td>A square fiducial marker readable by a camera, giving full pose. Used here only on the ground-truth rig (§11.2)</td></tr>
+<tr><td><b>BMS</b></td><td>Battery management system — cell balancing and over-discharge protection</td></tr>
+<tr><td><b>Bottleneck assignment</b></td><td>Cone-to-target matching that minimises the <i>largest</i> single distance rather than the total. Chosen because the layout is ready only when the last cone arrives (§12.1)</td></tr>
+<tr><td><b>EKF</b></td><td>Extended Kalman Filter — fuses UWB position with wheel odometry and gyroscope into a single pose estimate</td></tr>
+<tr><td><b>ESP-NOW</b></td><td>Espressif's connectionless 2.4 GHz link. No access point, 2–5 ms latency, 250-byte payload. The control link (§11.3)</td></tr>
+<tr><td><b>GDOP</b></td><td>Geometric dilution of precision — how much poor anchor geometry amplifies ranging error into position error</td></tr>
+<tr><td><b>Geofence</b></td><td>A boundary a cone refuses to cross regardless of command (F5.3)</td></tr>
+<tr><td><b>Holonomic</b></td><td>Able to move instantaneously in any direction. Differential-drive cones are <i>not</i>, which is why ORCA output must be wrapped by a unicycle controller (§11.4)</td></tr>
+<tr><td><b>Hungarian algorithm</b></td><td>Classical O(<i>n</i>³) solution to minimum-sum assignment. Implemented first as a baseline, then compared against the bottleneck variant (§12.1)</td></tr>
+<tr><td><b>IMU</b></td><td>Inertial measurement unit — accelerometer and gyroscope. Supplies heading rate and tip detection</td></tr>
+<tr><td><b>ISO 3888-2</b></td><td>The standard double-lane-change ("moose test") course geometry, used as a preset (§3)</td></tr>
+<tr><td><b>MoSCoW</b></td><td>Must / Should / Could / Won't prioritisation (§7.1). It measures build sequencing, never permission to omit a safety feature</td></tr>
+<tr><td><b>ORCA</b></td><td>Optimal Reciprocal Collision Avoidance — each agent takes half the responsibility for avoiding each neighbour. The chosen avoidance method (§11.4)</td></tr>
+<tr><td><b>PCNT</b></td><td>The ESP32's hardware pulse-counter peripheral. Used for quadrature decoding so encoder edges do not consume CPU (§12.3)</td></tr>
+<tr><td><b>PID</b></td><td>Proportional–integral–derivative controller. Here, the innermost wheel-velocity loop at 200 Hz</td></tr>
+<tr><td><b>Pose</b></td><td>Position and heading together — (<i>x</i>, <i>y</i>, <i>θ</i>)</td></tr>
+<tr><td><b>RMS</b></td><td>Root mean square. NFR-1 is stated in RMS because a single worst case is not representative and a mean hides the tail; the 95th percentile bounds the tail separately</td></tr>
+<tr><td><b>RTK-GPS</b></td><td>Satellite positioning corrected by a fixed base station, giving ~2 cm. Rejected on cost per unit (§11.2)</td></tr>
+<tr><td><b>TDMA</b></td><td>Time-division multiple access — cones take turns ranging, which is why the UWB fix rate falls as the fleet grows (§11.2)</td></tr>
+<tr><td><b>TDoA</b></td><td>Time difference of arrival — tags transmit and synchronised anchors listen. The scaling path beyond ~10 cones (§11.2)</td></tr>
+<tr><td><b>TWR</b></td><td>Two-way ranging — the baseline UWB method: a tag and an anchor exchange packets and derive distance from the round trip</td></tr>
+<tr><td><b>Unicycle model</b></td><td>Describing a differential-drive robot by forward speed <i>v</i> and turn rate <i>ω</i> rather than by two wheel speeds</td></tr>
+<tr><td><b>UWB</b></td><td>Ultra-wideband radio. Used for ranging, not data: 10–30 cm accuracy over ~100 m, and the chosen basis for localisation (§11.2)</td></tr>
+</tbody></table>
+
+<hr>
+<p style="font-size:8.6pt;color:#5d6874;font-family:var(--sans);text-align:center;margin-top:18px">
+Collaborative Training Cone System &nbsp;·&nbsp; Design Specification, revision 1.0 &nbsp;·&nbsp;
+8 September 2026 &nbsp;·&nbsp; end of document</p>
+
+</body></html>

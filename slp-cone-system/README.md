@@ -6,16 +6,32 @@ A swarm of self-driving traffic cones for driver training. An instructor draws o
 an exercise on a tablet; the cones assign themselves to positions and drive there together
 without colliding. Selecting a different exercise rearranges the pad in under a minute.
 
-## Documents
+## The document
 
-| Doc | What it answers |
+**[`SLP_Cone_System_Design_Specification.pdf`](SLP_Cone_System_Design_Specification.pdf)** —
+22 pages, everything in one typeset document. This is the deliverable: hand it to the
+advisor.
+
+| | Contents |
 |---|---|
-| **[`docs/00-functional-spec.md`](docs/00-functional-spec.md)** | **What the system does.** Feature catalogue (F1–F8), use cases, tablet screens, non-functional requirements, MoSCoW prioritisation, verification matrix, scope boundaries. **Start here.** |
-| [`docs/01-architecture.md`](docs/01-architecture.md) | *How* it does it. The four defining design decisions, subsystem specs, control cascade, stack recommendation |
-| [`docs/02-plan.md`](docs/02-plan.md) | Who builds what, when. Team split, two-semester milestones, risk register |
+| Front | Cover, document control, identifier conventions, contents |
+| **Part I** | **Functional Specification** — §1–10. What the system does, and the basis on which it will be assessed |
+| **Part II** | **System Architecture** — §11–14. One defensible way of meeting Part I, with each choice argued against what was rejected |
+| **Part III** | **Execution** — §15–19. Team split, two-semester schedule, sequencing rules, risk register |
+| Appendices | A: all 53 features with priority and owner · B: every derived number with its source section · C: glossary |
 
-The functional specification is authoritative. If the architecture conflicts with it, the
-architecture changes.
+Six figures: the feature map, the tablet Map screen, system topology, software
+decomposition, the cone state machine, and the two-semester schedule.
+
+**Part I is authoritative.** If the architecture conflicts with it, the architecture
+changes.
+
+### Sources
+
+The PDF is generated from HTML in [`pdf/`](pdf/) — see [`pdf/README.md`](pdf/README.md) to
+rebuild. The three files in [`docs/`](docs/) are the working drafts the document was built
+from; they are convenient to read and diff on GitHub, but the PDF is the fuller and
+authoritative version.
 
 ## Feature areas at a glance
 
