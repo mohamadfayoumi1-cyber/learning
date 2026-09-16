@@ -9,12 +9,14 @@ without colliding. Selecting a different exercise rearranges the pad in under a 
 ## The document
 
 **[`SLP_Cone_System_Design_Specification.pdf`](SLP_Cone_System_Design_Specification.pdf)** —
-22 pages, everything in one typeset document. This is the deliverable: hand it to the
+23 pages, everything in one typeset document. This is the deliverable: hand it to the
 advisor.
 
 | | Contents |
 |---|---|
-| Front | Cover, document control, identifier conventions, contents |
+| Front | Cover and contents |
+| **Executive Summary** | One page: the problem, the seven decisions this document takes, the five it leaves to the advisor, and what to do this week |
+| Document control | Identifier conventions, precedence between the parts, what this adds to the approved proposal |
 | **Part I** | **Functional Specification** — §1–10. What the system does, and the basis on which it will be assessed |
 | **Part II** | **System Architecture** — §11–14. One defensible way of meeting Part I, with each choice argued against what was rejected |
 | **Part III** | **Execution** — §15–19. Team split, two-semester schedule, sequencing rules, risk register |

@@ -18,6 +18,7 @@ w.add_metadata({
  '/Keywords':'SLP, capstone, swarm robotics, UWB localisation, ORCA, ESP-NOW, driver training, mechatronics',
  '/Creator':'Chromium + Playwright','/Producer':'pypdf'})
 w.page_layout='/SinglePage'; w.page_mode='/UseOutlines'
-out=B+'/SLP_Cone_System_Design_Specification.pdf'
+out=os.path.join(os.path.dirname(os.path.abspath(B)),
+                 'SLP_Cone_System_Design_Specification.pdf')  # next to the docs, not in the build dir
 w.write(out)
 print('MERGED:',n,'-> total',sum(n.values()),'pages |',round(os.path.getsize(out)/1024,1),'KB')

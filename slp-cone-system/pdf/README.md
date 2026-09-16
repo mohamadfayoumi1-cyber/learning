@@ -13,7 +13,7 @@ the source of truth for the document; edit it, then rebuild.
 | `toc.html` | **Generated** by `mktoc.py` — do not edit by hand |
 | `build.mjs` | Renders the HTML to PDF with headless Chromium via Playwright, including running header and footer |
 | `mktoc.py` | Builds `toc.html` from the page map |
-| `merge.py` | Merges cover + contents + body, adds PDF bookmarks and metadata |
+| `merge.py` | Merges cover + contents + body, adds PDF bookmarks and metadata, and writes the result to `../SLP_Cone_System_Design_Specification.pdf` |
 | `pipeline.sh` | Runs the whole sequence |
 
 ## Rebuild

@@ -1,0 +1,7 @@
+# build intermediates — the final PDF lives one level up
+cover.pdf
+toc.pdf
+body.pdf
+*.png
+node_modules
+toc.json

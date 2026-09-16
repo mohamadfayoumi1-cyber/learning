@@ -4,6 +4,83 @@
 <style>.tocmk{font-size:3px;color:#fff;letter-spacing:0;font-family:monospace}</style>
 </head><body>
 
+<!-- ============ EXECUTIVE SUMMARY ============ -->
+<h1 class="part"><span class="tocmk">QQ000QQ</span>Executive Summary<span class="pt">Front matter</span></h1>
+
+<p class="lead">One page for the reader who will not read the other twenty-one: what is
+being built, what this document decides, what it does not yet decide, and what happens
+next.</p>
+
+<h3><span class="n">§</span>The problem</h3>
+<p>A driving instructor sets each exercise by walking the training pad and placing cones by
+hand. That consumes ten to fifteen minutes of a sixty-minute lesson, produces geometry that
+is not repeatable between sessions, and puts an instructor on foot in the same space as a
+learner driver.</p>
+
+<h3><span class="n">§</span>The system</h3>
+<p>A fleet of self-driving traffic cones. The instructor selects or draws an exercise on a
+tablet; the cones assign themselves to positions and drive there together without colliding.
+Selecting a different exercise rearranges the pad in under a minute. Cone geometry becomes
+repeatable to the centimetre and the instructor never leaves the vehicle.</p>
+
+<h3><span class="n">§</span>What this document decides</h3>
+<table class="compact">
+<thead><tr><th style="width:22%">Question</th><th style="width:30%">Decision</th><th>Reasoning, in brief</th><th style="width:7%">See</th></tr></thead>
+<tbody>
+<tr><td><b>Where does control live?</b></td><td>Hybrid — the coordinator assigns and plans globally; each cone controls its own pose and runs its own reflexes</td><td>Safety never crosses the radio, and the split maps cleanly onto four students</td><td>§11.1</td></tr>
+<tr><td><b>How does a cone know where it is?</b></td><td>A UWB tag trilaterated against four surveyed anchors, fused with wheel odometry and a gyroscope in an EKF</td><td>The only method both outdoor-capable and affordable per unit. <b>The project's highest-risk subsystem</b></td><td>§11.2</td></tr>
+<tr><td><b>How do cones talk?</b></td><td>ESP-NOW for the control link through a dedicated ESP32 gateway; Wi-Fi only between tablet and coordinator</td><td>2–5 ms latency, no access point needed on the pad, and it sidesteps the shared-channel constraint rather than fighting it</td><td>§11.3</td></tr>
+<tr><td><b>How do they avoid each other?</b></td><td>Central ORCA at 10 Hz with a 0.60 m radius, plus an independent braking reflex on each cone</td><td>Continuous and collision-free under its assumptions; the radius is <i>derived</i> from a 190 ms latency budget, not guessed</td><td>§11.4</td></tr>
+<tr><td><b>How many cones?</b></td><td>Six as the prototype baseline; software with no fixed limit, verified in simulation at twelve</td><td>The seven standard exercises need between four and twelve. The proposal does not state a number, yet it sets cost and pad size</td><td>§3</td></tr>
+<tr><td><b>What gets built first?</b></td><td>The simulator, before any hardware exists</td><td>Three of the four students can then progress without waiting on the machine shop</td><td>§14.1</td></tr>
+<tr><td><b>Which stack?</b></td><td>Python coordinator, C++ on ESP32-S3, a browser-based tablet application</td><td>The fastest route for this team. ROS 2 was considered and argued against — that call reverses if a student already knows it</td><td>§13</td></tr>
+</tbody></table>
+
+<h3><span class="n">§</span>What this document adds to the approved proposal</h3>
+<p>Four things, each argued where it appears: a <b>vehicle-present interlock</b> (F5.6),
+<b>re-deployment of a displaced cone</b> (F3.8), a <b>fixed fleet size</b>, and
+<b>measurable acceptance criteria</b> throughout. The first is a safety feature the proposal
+does not mention and that an assessment panel will ask about; the second is what makes the
+system usable in a setting where cones are routinely struck. See Document Control.</p>
+
+<h3><span class="n">§</span>What is <i>not</i> yet decided</h3>
+<p>Five questions belong to the advisor, and all five should be closed before anything is
+built. They are set out in full in §10.</p>
+<table class="compact">
+<thead><tr><th style="width:5%">#</th><th style="width:42%">Question</th><th>Why it cannot wait</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Prototype fleet size</td><td>Sets the budget and the pad area</td></tr>
+<tr><td>2</td><td>Pad dimensions, surface, and whether a specific site exists</td><td>Determines the localisation technology</td></tr>
+<tr><td><b>3</b></td><td><b>Is an indoor demonstration acceptable?</b></td><td><b>The largest lever in the project.</b> Indoors, an overhead camera gives ≈ 1 cm accuracy for the cost of one camera and the highest-risk subsystem becomes cheap and quick. Outdoors, that fails and UWB is required</td></tr>
+<tr><td><b>4</b></td><td><b>Is heading control required, or is position enough?</b></td><td>Cones are rotationally symmetric. If heading does not matter, NFR-2 and a substantial slice of the localisation work disappear</td></tr>
+<tr><td>5</td><td>Must a cone survive being driven over, or only bumped?</td><td>Drives the entire mechanical concept</td></tr>
+</tbody></table>
+<div class="note warn">
+<span class="lbl">The single most useful thing to do this week</span>
+<p>Put <b>questions 3 and 4</b> to the advisor, in that order, before any other work starts.
+Between them they can remove the majority of the project's technical risk at no cost to its
+academic value — and answered late, they invalidate work that has already been done.</p>
+</div>
+
+<h3><span class="n">§</span>What success looks like</h3>
+<div class="demo">
+<span class="lbl">The target — four minutes, on hardware, at the defence</span>
+<p>Four cones. Load the slalom preset, adjust the spacing, preview, execute — the cones
+cross the area simultaneously without colliding and settle. <b>READY</b> appears. Load a
+parking bay and execute again. Knock a cone over; the system detects it, alerts, and
+re-deploys it once righted. Press <b>E-STOP</b> mid-motion; everything halts.</p>
+</div>
+<p>That one sequence exercises effectively the whole <i>Must</i> feature set and tells the
+story of the problem without a slide. Build toward it specifically (§7.2).</p>
+
+<h3><span class="n">§</span>Start here</h3>
+<ol>
+<li><b>Close the five questions in §10 with the advisor</b> — questions 3 and 4 first.</li>
+<li><b>Fix the fleet size and the pad assumption</b>, and update §3 accordingly.</li>
+<li><b>Agree the two interfaces in §15 and write them down</b> — the cone message set, and the coordinator-to-cone abstraction. These are where four separate workstreams meet, and where integration projects usually fail.</li>
+<li><b>Start the simulator.</b> It is the longest pole with no dependencies.</li>
+</ol>
+
 <!-- ============ DOCUMENT CONTROL ============ -->
 <h1 class="part"><span class="tocmk">QQ001QQ</span>Document Control<span class="pt">Front matter</span></h1>
 
@@ -17,7 +94,7 @@
 <tr><td style="font-weight:700;color:#181c20">Category</td><td>Mechanical and Mechatronics</td></tr>
 <tr><td style="font-weight:700;color:#181c20">Advisor</td><td>Ahmad Koubeissi</td></tr>
 <tr><td style="font-weight:700;color:#181c20">Team composition</td><td>1 student (MECH) + 3 students (MECA)</td></tr>
-<tr><td style="font-weight:700;color:#181c20">Status</td><td>Design phase — specification and architecture. No implementation has begun.</td></tr>
+<tr><td style="font-weight:700;color:#181c20">Status</td><td>Design phase — specification and architecture. No implementation has begun, and none should begin before the five questions in §10 are closed.</td></tr>
 </tbody></table>
 
 <h3><span class="n">§</span>How this document is organised</h3>
